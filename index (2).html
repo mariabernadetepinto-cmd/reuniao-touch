@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendário de Reuniões — TouchBase</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f8f7f4;
+    --surface: #ffffff;
+    --border: rgba(0,0,0,0.1);
+    --text: #1a1a1a;
+    --text-muted: #666;
+    --radius: 10px;
+
+    --blue-bg: #E6F1FB; --blue-border: #85B7EB; --blue-text: #0C447C;
+    --purple-bg: #EEEDFE; --purple-border: #AFA9EC; --purple-text: #3C3489;
+    --teal-bg: #E1F5EE; --teal-border: #5DCAA5; --teal-text: #085041;
+    --amber-bg: #FAEEDA; --amber-border: #EF9F27; --amber-text: #633806;
+    --pink-bg: #FBEAF0; --pink-border: #ED93B1; --pink-text: #72243E;
+    --green-bg: #EAF3DE; --green-border: #97C459; --green-text: #27500A;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a18; --surface: #242422; --border: rgba(255,255,255,0.1);
+      --text: #f0ede8; --text-muted: #999;
+      --blue-bg: #0C447C; --blue-border: #378ADD; --blue-text: #B5D4F4;
+      --purple-bg: #3C3489; --purple-border: #7F77DD; --purple-text: #CECBF6;
+      --teal-bg: #085041; --teal-border: #1D9E75; --teal-text: #9FE1CB;
+      --amber-bg: #633806; --amber-border: #BA7517; --amber-text: #FAC775;
+      --pink-bg: #72243E; --pink-border: #D4537E; --pink-text: #F4C0D1;
+      --green-bg: #27500A; --green-border: #639922; --green-text: #C0DD97;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .container { max-width: 960px; margin: 0 auto; }
+
+  header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  header h1 { font-size: 22px; font-weight: 500; }
+  header p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+  .badge-updated {
+    font-size: 12px;
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 2rem;
+  }
+
+  .leg {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .leg-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .section { margin-bottom: 2rem; }
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 0.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 8px;
+  }
+
+  .card {
+    border-radius: var(--radius);
+    padding: 10px 13px;
+    border: 0.5px solid transparent;
+    transition: opacity 0.15s;
+  }
+
+  .card:hover { opacity: 0.85; }
+
+  .card .tag {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.65;
+    margin-bottom: 4px;
+  }
+
+  .card .name {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  .card .meta {
+    font-size: 11px;
+    margin-top: 4px;
+    opacity: 0.6;
+  }
+
+  .c-blue   { background: var(--blue-bg);   border-color: var(--blue-border);   color: var(--blue-text); }
+  .c-purple { background: var(--purple-bg); border-color: var(--purple-border); color: var(--purple-text); }
+  .c-teal   { background: var(--teal-bg);   border-color: var(--teal-border);   color: var(--teal-text); }
+  .c-amber  { background: var(--amber-bg);  border-color: var(--amber-border);  color: var(--amber-text); }
+  .c-pink   { background: var(--pink-bg);   border-color: var(--pink-border);   color: var(--pink-text); }
+  .c-green  { background: var(--green-bg);  border-color: var(--green-border);  color: var(--green-text); }
+
+  .loading {
+    text-align: center;
+    padding: 4rem;
+    color: var(--text-muted);
+    font-size: 15px;
+  }
+
+  .error {
+    background: #fff0f0;
+    border: 0.5px solid #f09595;
+    color: #791F1F;
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    font-size: 14px;
+    margin-bottom: 1rem;
+  }
+
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+
+  .filter-btn {
+    font-size: 12px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 0.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .filter-btn:hover { background: var(--border); }
+  .filter-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+  .count { font-size: 11px; opacity: 0.6; margin-left: 4px; }
+
+  footer {
+    margin-top: 3rem;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div>
+      <h1>Calendário de Reuniões</h1>
+      <p>TouchBase — atualizado automaticamente via Google Sheets</p>
+    </div>
+    <span class="badge-updated" id="updated">Carregando...</span>
+  </header>
+
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:#EF9F27"></div> Rotinas diárias</div>
+    <div class="leg"><div class="leg-dot" style="background:#378ADD"></div> Semanais</div>
+    <div class="leg"><div class="leg-dot" style="background:#7F77DD"></div> Quinzenais</div>
+    <div class="leg"><div class="leg-dot" style="background:#1D9E75"></div> Mensais</div>
+    <div class="leg"><div class="leg-dot" style="background:#D4537E"></div> People / 1:1</div>
+    <div class="leg"><div class="leg-dot" style="background:#639922"></div> Time / Squads</div>
+  </div>
+
+  <div class="filter-bar" id="filter-bar">
+    <button class="filter-btn active" data-filter="all">Todos</button>
+    <button class="filter-btn" data-filter="diarias">Diárias</button>
+    <button class="filter-btn" data-filter="semanais">Semanais</button>
+    <button class="filter-btn" data-filter="quinzenais">Quinzenais</button>
+    <button class="filter-btn" data-filter="mensais">Mensais</button>
+    <button class="filter-btn" data-filter="people">People / 1:1</button>
+    <button class="filter-btn" data-filter="time">Time / Squads</button>
+  </div>
+
+  <div id="content">
+    <div class="loading">Carregando reuniões do Sheets...</div>
+  </div>
+
+  <footer>Dados sincronizados com Google Sheets via Apps Script</footer>
+</div>
+
+<script>
+// ⚠️ SUBSTITUA pela URL gerada após publicar o Apps Script como Web App
+const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/mercadolivre.com/s/AKfycbwHPGge1qphBGrT27F1af9tT7Zo7VsUSatZcHyxuwSTtf_QdXSFeFp9OCbvDHEEEtC-/exec';
+
+const SECTIONS = [
+  { key: 'diarias',    label: 'Rotinas diárias',    color: 'c-amber',  icon: '☀️',  freq: 'Diária' },
+  { key: 'semanais',   label: 'Reuniões semanais',   color: 'c-blue',   icon: '📅',  freq: 'Semanal' },
+  { key: 'quinzenais', label: 'Reuniões quinzenais', color: 'c-purple', icon: '🔁',  freq: 'Quinzenal' },
+  { key: 'mensais',    label: 'Reuniões mensais',    color: 'c-teal',   icon: '📆',  freq: 'Mensal' },
+  { key: 'people',     label: 'People / 1:1',        color: 'c-pink',   icon: '👥',  freq: 'Semanal' },
+  { key: 'time',       label: 'Time & Squads',       color: 'c-green',  icon: '🏃',  freq: 'Semanal' },
+];
+
+let allData = null;
+let activeFilter = 'all';
+
+async function loadData() {
+  try {
+    const res = await fetch(APPS_SCRIPT_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    allData = await res.json();
+    document.getElementById('updated').textContent = 'Atualizado em ' + (allData.atualizado || '—');
+    render();
+  } catch (e) {
+    document.getElementById('content').innerHTML =
+      '<div class="error">Não foi possível carregar os dados.<br>Verifique se a URL do Apps Script está correta e o Web App está publicado como público.<br><br><small>' + e.message + '</small></div>' +
+      renderFallback();
+    document.getElementById('updated').textContent = 'Erro ao carregar';
+  }
+}
+
+function render() {
+  const content = document.getElementById('content');
+  if (!allData) return;
+
+  const sections = SECTIONS.filter(s => activeFilter === 'all' || activeFilter === s.key);
+  let html = '';
+
+  sections.forEach(sec => {
+    const items = (allData[sec.key] || []);
+    if (!items.length) return;
+
+    html += `<div class="section" data-section="${sec.key}">
+      <div class="section-title">${sec.icon} ${sec.label} <span class="count">${items.length}</span></div>
+      <div class="grid">`;
+
+    items.forEach(item => {
+      html += `<div class="card ${sec.color}">
+        <div class="tag">${sec.freq} · ${item.analista || ''}</div>
+        <div class="name">${item.nome}</div>
+        ${item.carga ? `<div class="meta">${item.carga}h / semana</div>` : ''}
+      </div>`;
+    });
+
+    html += '</div></div>';
+  });
+
+  content.innerHTML = html || '<div class="loading">Nenhum item para mostrar.</div>';
+}
+
+function renderFallback() {
+  // Dados estáticos de fallback caso o Sheets não esteja configurado ainda
+  return `<p style="text-align:center; color: var(--text-muted); font-size:13px; margin-top:2rem">
+    Configure o Apps Script e substitua a URL no arquivo HTML para ver os dados ao vivo.
+  </p>`;
+}
+
+document.getElementById('filter-bar').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeFilter = btn.dataset.filter;
+  if (allData) render();
+});
+
+loadData();
+</script>
+</body>
+</html>
