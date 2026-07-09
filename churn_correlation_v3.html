@@ -241,7 +241,7 @@ function buildTable(){
       <td style="color:var(--muted)">${pFmt(d.spearman_p)}</td>
       <td>${d.mean_churn}</td>
       <td>${d.mean_active}</td>
-      <td style="color:${d.delta>=0?'var(--red)':'var(--green)';font-weight:700}">${d.delta>0?'+':''}${d.delta}</td>
+      <td style="color:${d.delta>=0?'var(--red)':'var(--green)'};font-weight:700">${d.delta>0?'+':''}${d.delta}</td>
       <td><span class="pill ${pillCls}">${pillLbl}</span></td>
     </tr>`;
   });
