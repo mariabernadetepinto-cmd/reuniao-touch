@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Desvio ORH × Churn M+1 — Brasil · Todas as carreiras</title>
+<style>
+:root{
+  --bg:#0f172a;--surface:#1e293b;--s2:#243447;--border:#334155;
+  --text:#f1f5f9;--muted:#94a3b8;--sub:#64748b;
+  --newbie:#2563EB;--newhire:#D97706;--tenured:#059669;--veteran:#DC2626;
+  --blue:#3b82f6;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:13px;}
+header{padding:22px 32px 14px;border-bottom:1px solid var(--border);}
+header h1{font-size:20px;font-weight:800;margin-bottom:3px;}
+header p{color:var(--muted);font-size:12px;}
+
+/* hyp panel */
+.layout{display:grid;grid-template-columns:240px 1fr;gap:0;min-height:calc(100vh - 90px);}
+.sidebar{border-right:1px solid var(--border);padding:20px 16px;}
+.sidebar-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:12px;}
+.hyp{border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;}
+.hyp-tag{font-size:10px;font-weight:700;color:var(--blue);margin-bottom:5px;}
+.hyp-title{font-size:12px;font-weight:700;margin-bottom:4px;line-height:1.4;}
+.hyp-desc{font-size:11px;color:var(--muted);line-height:1.5;}
+.bucket-box{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:14px;}
+.bucket-title{font-size:10px;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em;}
+.bucket-row{display:flex;gap:16px;}
+.bucket-val{text-align:center;}
+.bucket-val .v{font-size:24px;font-weight:800;}
+.bucket-val .lbl{font-size:10px;color:var(--muted);margin-top:2px;}
+.bucket-val .sub{font-size:10px;color:var(--green);}
+
+/* main */
+.main{padding:20px 24px;}
+.career-tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);}
+.ctab{padding:9px 16px;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;text-transform:uppercase;letter-spacing:.05em;}
+.ctab.active{color:var(--text);border-bottom-color:var(--blue);}
+.career-panel{display:none;}
+.career-panel.active{display:block;}
+
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px;}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}
+.chart-title{font-size:12px;font-weight:700;margin-bottom:4px;}
+.chart-sub{font-size:11px;color:var(--muted);margin-bottom:12px;}
+svg text{font-family:'Inter',system-ui,sans-serif;}
+
+/* legend */
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);}
+.leg-dot{width:10px;height:3px;border-radius:2px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>Desvio de ORH × Churn M+1</h1>
+  <p>ORH realizado vs ORH planejado · Drivers Experienced (≥5 rotas/mês) · MLB · 2025+ · Todas as carreiras</p>
+</header>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-title">Hipóteses levantadas</div>
+
+    <div class="hyp">
+      <div class="hyp-tag">H1</div>
+      <div class="hyp-title">Trabalho além do combinado gera cansaço e frustração</div>
+      <div class="hyp-desc">Quando o ORH realizado excede sistematicamente o planejado, o driver percebe que trabalha mais do que acordado.</div>
+    </div>
+
+    <div class="hyp">
+      <div class="hyp-tag">H2</div>
+      <div class="hyp-title">Efeito amplificado para quem acumula ORH alto com frequência</div>
+      <div class="hyp-desc">A concentração de rotas com desvio alto tem efeito monotônico no churn — quanto mais rotas acima do threshold, maior a taxa de saída.</div>
+    </div>
+
+    <div class="bucket-box" id="bucket-box">
+      <div class="bucket-title">Bucket ≥+50% desvio (Experienced)</div>
+      <div class="bucket-row" id="bucket-vals"></div>
+    </div>
+
+    <div style="margin-top:16px">
+      <div class="sidebar-title">Próximos passos</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;">
+          <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:3px">1 · Verificar sinal no ciclo PM</div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.4">Drivers de turno tarde que extrapolam o ORH podem ser o subgrupo de maior risco.</div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;">
+          <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:3px">2 · Testar dupla sobrecarga: ORH alto e SPR alto</div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.4">A sobreposição de jornada longa e carga excessiva pode ter efeito multiplicativo.</div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;">
+          <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:3px">3 · Calibrar threshold por carreira</div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.4">O desvio sistêmico varia por carreira. VETERAN sente o efeito a partir de desvios menores.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="career-tabs" id="career-tabs"></div>
+    <div id="career-panels"></div>
+  </div>
+</div>
+
+<script>
+const CAREERS=['NEW HIRE','NEWBIE','TENURED','VETERAN'];
+const COLORS={'NEW HIRE':'#D97706',NEWBIE:'#2563EB',TENURED:'#059669',VETERAN:'#DC2626'};
+const BUCKET_LABELS=['<-20%','-20% a 0%','0% a +20%','+20% a +100%','>+100%'];
+
+const DOSE=[
+  {career:'NEW HIRE',bucket:'<-20%',n:2848,rate:13.2},
+  {career:'NEW HIRE',bucket:'-20% a 0%',n:11223,rate:12.9},
+  {career:'NEW HIRE',bucket:'0% a +20%',n:22064,rate:14.0},
+  {career:'NEW HIRE',bucket:'+20% a +100%',n:59483,rate:18.3},
+  {career:'NEW HIRE',bucket:'>+100%',n:17856,rate:19.9},
+  {career:'NEWBIE',bucket:'<-20%',n:3824,rate:8.9},
+  {career:'NEWBIE',bucket:'-20% a 0%',n:13644,rate:9.1},
+  {career:'NEWBIE',bucket:'0% a +20%',n:21426,rate:10.6},
+  {career:'NEWBIE',bucket:'+20% a +100%',n:37304,rate:12.9},
+  {career:'NEWBIE',bucket:'>+100%',n:8347,rate:13.1},
+  {career:'TENURED',bucket:'<-20%',n:7833,rate:8.8},
+  {career:'TENURED',bucket:'-20% a 0%',n:26248,rate:8.6},
+  {career:'TENURED',bucket:'0% a +20%',n:37247,rate:10.1},
+  {career:'TENURED',bucket:'+20% a +100%',n:55669,rate:12.3},
+  {career:'TENURED',bucket:'>+100%',n:11132,rate:12.7},
+  {career:'VETERAN',bucket:'<-20%',n:57083,rate:5.7},
+  {career:'VETERAN',bucket:'-20% a 0%',n:184790,rate:6.2},
+  {career:'VETERAN',bucket:'0% a +20%',n:206867,rate:7.6},
+  {career:'VETERAN',bucket:'+20% a +100%',n:205678,rate:9.8},
+  {career:'VETERAN',bucket:'>+100%',n:25294,rate:10.9},
+];
+
+const THRESHOLD={"NEW HIRE":{"PCT_P25":{"0-20%":{"n":88,"rate":54.5},"20-40%":{"n":79,"rate":46.8},"40-60%":{"n":61,"rate":55.7},"60-80%":{"n":30,"rate":63.3},"80-100%":{"n":22,"rate":68.2}},"PCT_P50":{"0-20%":{"n":88,"rate":51.2},"20-40%":{"n":75,"rate":41.7},"40-60%":{"n":53,"rate":45.1},"60-80%":{"n":43,"rate":49.5},"80-100%":{"n":47,"rate":57.7}},"PCT_P60":{"0-20%":{"n":120,"rate":49.8},"20-40%":{"n":91,"rate":43.7},"40-60%":{"n":64,"rate":49.3},"60-80%":{"n":57,"rate":51.2},"80-100%":{"n":54,"rate":60.2}},"PCT_P75":{"0-20%":{"n":148,"rate":48.6},"20-40%":{"n":104,"rate":47.7},"40-60%":{"n":72,"rate":51.9},"60-80%":{"n":61,"rate":55.0},"80-100%":{"n":47,"rate":63.5}},"PCT_P80":{"0-20%":{"n":156,"rate":49.0},"20-40%":{"n":105,"rate":48.6},"40-60%":{"n":75,"rate":53.6},"60-80%":{"n":62,"rate":61.8},"80-100%":{"n":48,"rate":68.8}}},"NEWBIE":{"PCT_P25":{"0-20%":{"n":130,"rate":46.9},"20-40%":{"n":127,"rate":34.6},"40-60%":{"n":83,"rate":38.6},"60-80%":{"n":56,"rate":48.2},"80-100%":{"n":29,"rate":58.6}},"PCT_P50":{"0-20%":{"n":155,"rate":38.1},"20-40%":{"n":110,"rate":35.5},"40-60%":{"n":90,"rate":38.9},"60-80%":{"n":62,"rate":46.8},"80-100%":{"n":33,"rate":60.6}},"PCT_P60":{"0-20%":{"n":168,"rate":37.5},"20-40%":{"n":118,"rate":35.6},"40-60%":{"n":97,"rate":40.2},"60-80%":{"n":70,"rate":48.6},"80-100%":{"n":38,"rate":63.2}},"PCT_P75":{"0-20%":{"n":214,"rate":35.5},"20-40%":{"n":138,"rate":36.2},"40-60%":{"n":104,"rate":42.3},"60-80%":{"n":74,"rate":51.4},"80-100%":{"n":41,"rate":65.9}},"PCT_P80":{"0-20%":{"n":229,"rate":35.8},"20-40%":{"n":143,"rate":37.1},"40-60%":{"n":108,"rate":43.5},"60-80%":{"n":76,"rate":52.6},"80-100%":{"n":43,"rate":67.4}}},"TENURED":{"PCT_P25":{"0-20%":{"n":507,"rate":31.8},"20-40%":{"n":543,"rate":29.5},"40-60%":{"n":349,"rate":31.5},"60-80%":{"n":186,"rate":33.3},"80-100%":{"n":70,"rate":52.9}},"PCT_P50":{"0-20%":{"n":560,"rate":29.6},"20-40%":{"n":530,"rate":30.4},"40-60%":{"n":384,"rate":34.6},"60-80%":{"n":215,"rate":36.7},"80-100%":{"n":110,"rate":48.2}},"PCT_P60":{"0-20%":{"n":610,"rate":29.2},"20-40%":{"n":548,"rate":31.0},"40-60%":{"n":410,"rate":36.1},"60-80%":{"n":230,"rate":39.1},"80-100%":{"n":122,"rate":50.8}},"PCT_P75":{"0-20%":{"n":703,"rate":29.4},"20-40%":{"n":589,"rate":32.3},"40-60%":{"n":450,"rate":38.9},"60-80%":{"n":250,"rate":43.2},"80-100%":{"n":138,"rate":55.1}},"PCT_P80":{"0-20%":{"n":730,"rate":30.1},"20-40%":{"n":601,"rate":33.1},"40-60%":{"n":460,"rate":40.0},"60-80%":{"n":258,"rate":44.6},"80-100%":{"n":140,"rate":57.1}}},"VETERAN":{"PCT_P25":{"0-20%":{"n":10520,"rate":19.2},"20-40%":{"n":11943,"rate":19.3},"40-60%":{"n":6210,"rate":24.6},"60-80%":{"n":2429,"rate":28.0},"80-100%":{"n":663,"rate":27.3}},"PCT_P50":{"0-20%":{"n":14820,"rate":17.8},"20-40%":{"n":13200,"rate":20.1},"40-60%":{"n":7500,"rate":24.9},"60-80%":{"n":3400,"rate":30.2},"80-100%":{"n":1200,"rate":35.4}},"PCT_P60":{"0-20%":{"n":16100,"rate":17.2},"20-40%":{"n":14000,"rate":20.8},"40-60%":{"n":8200,"rate":25.8},"60-80%":{"n":3800,"rate":31.5},"80-100%":{"n":1400,"rate":37.0}},"PCT_P75":{"0-20%":{"n":18500,"rate":16.8},"20-40%":{"n":15800,"rate":21.4},"40-60%":{"n":9100,"rate":27.1},"60-80%":{"n":4200,"rate":33.8},"80-100%":{"n":1600,"rate":38.0}},"PCT_P80":{"0-20%":{"n":19200,"rate":16.5},"20-40%":{"n":16500,"rate":22.0},"40-60%":{"n":9600,"rate":28.3},"60-80%":{"n":4500,"rate":35.7},"80-100%":{"n":1700,"rate":39.5}}}};
+
+const THRESH_COLORS={'PCT_P25':'#6366f1','PCT_P50':'#3b82f6','PCT_P60':'#22d3ee','PCT_P75':'#f59e0b','PCT_P80':'#ef4444'};
+const THRESH_LABELS={'PCT_P25':'P25','PCT_P50':'P50','PCT_P60':'P60','PCT_P75':'P75','PCT_P80':'P80'};
+const BUCKETS_X=['0-20%','20-40%','40-60%','60-80%','80-100%'];
+
+// Build bucket highlights
+function buildBucketBox(){
+  const el=document.getElementById('bucket-vals');
+  const career50plus = CAREERS.map(c=>{
+    const d=DOSE.filter(r=>r.career===c).find(r=>r.bucket==='>+100%');
+    const base=DOSE.filter(r=>r.career===c).reduce((a,b)=>a+b.n,0);
+    return {career:c,rate:d?d.rate:0};
+  });
+  el.innerHTML=career50plus.map(d=>`
+    <div class="bucket-val">
+      <div class="v" style="color:${COLORS[d.career]}">${d.rate}%</div>
+      <div class="lbl">${d.career==='NEW HIRE'?'NEW H.':d.career}</div>
+    </div>`).join('');
+}
+
+// SVG dual-axis dose-response
+function drawDoseChart(career, svgEl){
+  const rows=DOSE.filter(r=>r.career===career);
+  const color=COLORS[career];
+  const W=svgEl.getAttribute('width')|0;
+  const H=svgEl.getAttribute('height')|0;
+  const PL=44,PR=44,PT=14,PB=34;
+  const IW=W-PL-PR, IH=H-PT-PB;
+
+  const maxN=Math.max(...rows.map(r=>r.n));
+  const minR=Math.min(...rows.map(r=>r.rate))-1;
+  const maxR=Math.max(...rows.map(r=>r.rate))+1;
+  const n=rows.length;
+  const barW=IW/n*0.55;
+  const xC=i=>PL+IW/n*i+IW/n/2;
+  const yBar=v=>PT+IH*(1-v/maxN);
+  const yLine=v=>PT+IH*(1-(v-minR)/(maxR-minR));
+
+  let svg='';
+  // grid
+  [0,25,50,75,100].forEach(pct=>{
+    const y=PT+IH*(1-pct/100);
+    svg+=`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="#1e293b" stroke-width="1"/>`;
+  });
+  // bars
+  rows.forEach((row,i)=>{
+    const bh=IH*(row.n/maxN);
+    const x=xC(i)-barW/2;
+    const isHigh=row.bucket==='>+100%';
+    svg+=`<rect x="${x}" y="${PT+IH-bh}" width="${barW}" height="${bh}" fill="${isHigh?color:'#334155'}" opacity="${isHigh?0.9:0.5}" rx="2"/>`;
+    svg+=`<text x="${xC(i)}" y="${H-6}" text-anchor="middle" font-size="9" fill="#64748b">${row.bucket}</text>`;
+    svg+=`<text x="${xC(i)}" y="${PT+IH-bh-4}" text-anchor="middle" font-size="8" fill="#94a3b8">${(row.n/1000).toFixed(0)}k</text>`;
+  });
+  // line
+  const pts=rows.map((r,i)=>`${xC(i)},${yLine(r.rate)}`).join(' ');
+  svg+=`<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
+  rows.forEach((row,i)=>{
+    svg+=`<circle cx="${xC(i)}" cy="${yLine(row.rate)}" r="4" fill="${color}" stroke="#0f172a" stroke-width="1.5"/>`;
+    svg+=`<text x="${xC(i)+5}" y="${yLine(row.rate)-5}" font-size="9" font-weight="700" fill="${color}">${row.rate}%</text>`;
+  });
+  // y-axes labels
+  [minR,maxR].forEach(v=>{
+    svg+=`<text x="${W-PR+4}" y="${yLine(v)+3}" font-size="8" fill="${color}">${v.toFixed(0)}%</text>`;
+  });
+
+  svgEl.innerHTML=svg;
+}
+
+// SVG threshold lines chart
+function drawThresholdChart(career, svgEl){
+  const color=COLORS[career];
+  const W=svgEl.getAttribute('width')|0;
+  const H=svgEl.getAttribute('height')|0;
+  const PL=36,PR=70,PT=14,PB=34;
+  const IW=W-PL-PR, IH=H-PT-PB;
+
+  const allRates=[];
+  Object.values(THRESHOLD[career]).forEach(t=>BUCKETS_X.forEach(b=>{if(t[b])allRates.push(t[b].rate);}));
+  const minR=Math.floor(Math.min(...allRates)-2);
+  const maxR=Math.ceil(Math.max(...allRates)+2);
+
+  const n=BUCKETS_X.length;
+  const xC=i=>PL+IW/(n-1)*i;
+  const yS=v=>PT+IH*(1-(v-minR)/(maxR-minR));
+
+  let svg='';
+  // grid
+  [0,10,20,30,40,50,60,70].filter(v=>v>=minR&&v<=maxR).forEach(v=>{
+    svg+=`<line x1="${PL}" y1="${yS(v)}" x2="${W-PR}" y2="${yS(v)}" stroke="#1e293b" stroke-width="1"/>
+          <text x="${PL-3}" y="${yS(v)+3}" text-anchor="end" font-size="8" fill="#64748b">${v}%</text>`;
+  });
+  BUCKETS_X.forEach((b,i)=>{
+    svg+=`<text x="${xC(i)}" y="${H-4}" text-anchor="middle" font-size="8" fill="#64748b">${b}</text>`;
+  });
+
+  // lines per threshold
+  Object.entries(THRESHOLD[career]).forEach(([tKey, tData])=>{
+    const tc=THRESH_COLORS[tKey];
+    const pts=BUCKETS_X.map((b,i)=>`${xC(i)},${yS(tData[b]?tData[b].rate:minR)}`).join(' ');
+    svg+=`<polyline points="${pts}" fill="none" stroke="${tc}" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>`;
+    BUCKETS_X.forEach((b,i)=>{
+      if(tData[b]) svg+=`<circle cx="${xC(i)}" cy="${yS(tData[b].rate)}" r="3" fill="${tc}" stroke="#0f172a" stroke-width="1"/>`;
+    });
+    // label at end
+    const last=tData['80-100%'];
+    if(last) svg+=`<text x="${xC(4)+5}" y="${yS(last.rate)+3}" font-size="8" font-weight="700" fill="${tc}">${THRESH_LABELS[tKey]}</text>`;
+  });
+
+  svgEl.innerHTML=svg;
+}
+
+// Build career panels
+function buildPanels(){
+  const tabsEl=document.getElementById('career-tabs');
+  const panelsEl=document.getElementById('career-panels');
+
+  CAREERS.forEach((career,ci)=>{
+    const color=COLORS[career];
+    // tab
+    tabsEl.innerHTML+=`<div class="ctab${ci===0?' active':''}" style="${ci===0?`color:${color};border-bottom-color:${color}`:''}" onclick="switchCareer('${career}',this,event)">${career}</div>`;
+
+    // panel
+    const div=document.createElement('div');
+    div.className='career-panel'+(ci===0?' active':'');
+    div.id='cp-'+career.replace(' ','-');
+    div.innerHTML=`
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title" style="color:${color}">${career} — Dose-resposta: Desvio ORH vs Churn</div>
+          <div class="chart-sub">Barras = volume de drivers · Linha = % Churn M+1 · Experienced ≥5 rotas</div>
+          <svg id="dose-${career.replace(' ','-')}" width="430" height="200"></svg>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title" style="color:${color}">${career} — Concentração de rotas acima do threshold</div>
+          <div class="chart-sub">X = % das rotas do driver acima do threshold · Y = % Churn M+1</div>
+          <svg id="thresh-${career.replace(' ','-')}" width="430" height="200"></svg>
+          <div class="legend">${Object.entries(THRESH_COLORS).map(([k,c])=>`<div class="leg-item"><div class="leg-dot" style="background:${c};width:16px;height:2px"></div>${THRESH_LABELS[k]}</div>`).join('')}</div>
+        </div>
+      </div>`;
+    panelsEl.appendChild(div);
+
+    requestAnimationFrame(()=>{
+      drawDoseChart(career, document.getElementById('dose-'+career.replace(' ','-')));
+      drawThresholdChart(career, document.getElementById('thresh-'+career.replace(' ','-')));
+    });
+  });
+}
+
+function switchCareer(career,el,e){
+  document.querySelectorAll('.ctab').forEach(t=>{t.classList.remove('active');t.style.color='';t.style.borderBottomColor='';});
+  document.querySelectorAll('.career-panel').forEach(p=>p.classList.remove('active'));
+  const color=COLORS[career];
+  el.classList.add('active');
+  el.style.color=color;
+  el.style.borderBottomColor=color;
+  document.getElementById('cp-'+career.replace(' ','-')).classList.add('active');
+}
+
+buildBucketBox();
+buildPanels();
+</script>
+</body>
+</html>
