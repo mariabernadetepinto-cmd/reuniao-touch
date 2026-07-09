@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Correlação Churn × ORH, DPPH e Paradas — MLB Envios Extra</title>
+<style>
+:root {
+  --bg:#0f172a; --surface:#1e293b; --surface2:#243447; --border:#334155;
+  --text:#f1f5f9; --muted:#94a3b8; --sub:#64748b;
+  --newbie:#2563EB; --newhire:#D97706; --tenured:#059669; --veteran:#DC2626;
+  --green:#22c55e; --red:#ef4444; --yellow:#f59e0b; --blue:#3b82f6;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.5;}
+header{padding:26px 32px 18px;border-bottom:1px solid var(--border);}
+header h1{font-size:20px;font-weight:700;margin-bottom:3px;}
+header p{color:var(--muted);font-size:12px;}
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 32px;overflow-x:auto;}
+.tab{padding:11px 18px;cursor:pointer;color:var(--muted);font-size:13px;font-weight:500;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;}
+.tab.active{color:var(--text);border-bottom-color:var(--blue);}
+.tab:hover{color:var(--text);}
+.panel{display:none;padding:24px 32px;}
+.panel.active{display:block;}
+
+/* tiles */
+.tiles-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;border-left:4px solid transparent;}
+.tile.newbie {border-left-color:var(--newbie);}
+.tile.newhire{border-left-color:var(--newhire);}
+.tile.tenured{border-left-color:var(--tenured);}
+.tile.veteran{border-left-color:var(--veteran);}
+.tile-career{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.tile-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;}
+.tile-label{font-size:11px;color:var(--sub);}
+.tile-val{font-size:16px;font-weight:700;}
+.tile-note{font-size:10px;color:var(--muted);margin-top:6px;border-top:1px solid var(--border);padding-top:6px;}
+.sig{color:var(--green);} .nosig{color:var(--yellow);} .neg{color:var(--red);}
+
+/* bar cards */
+.bar-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;}
+.bar-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+.bar-card-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;}
+
+/* section */
+.section-title{font-size:14px;font-weight:600;margin-bottom:14px;}
+.chart-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:28px;}
+.chart-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}
+.chart-career{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+.chart-meta{font-size:11px;color:var(--muted);margin-bottom:12px;}
+
+/* heatmap compare */
+.heatmap-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;overflow-x:auto;}
+table.hm{border-collapse:collapse;width:100%;}
+table.hm th{padding:8px 12px;font-size:11px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);text-align:center;}
+table.hm td{padding:8px 12px;font-size:12px;border-bottom:1px solid var(--border);text-align:center;}
+table.hm tr:last-child td{border-bottom:none;}
+table.hm td.career{font-weight:700;text-align:left;}
+.cell-pos{background:rgba(34,197,94,.18);color:#4ade80;}
+.cell-neg{background:rgba(239,68,68,.18);color:#f87171;}
+.cell-zero{background:rgba(148,163,184,.08);color:var(--muted);}
+
+/* stat table */
+.stat-table{width:100%;border-collapse:collapse;font-size:12px;}
+.stat-table th{background:var(--surface2);padding:9px 12px;font-size:11px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);}
+.stat-table td{padding:8px 12px;border-bottom:1px solid var(--border);}
+.stat-table tr:hover td{background:var(--surface);}
+.pill{display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700;}
+.pill-green{background:rgba(34,197,94,.15);color:var(--green);}
+.pill-red{background:rgba(239,68,68,.15);color:var(--red);}
+.pill-yellow{background:rgba(245,158,11,.15);color:var(--yellow);}
+
+.tooltip{position:fixed;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:9px 13px;font-size:12px;pointer-events:none;z-index:100;display:none;max-width:260px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Correlação Churn × ORH · DPPH · Paradas — MLB Envios Extra</h1>
+  <p>Pearson &amp; Spearman · Regra M-1 (RFL NEW_CHURN) · 2025+ · n = 791.017 drivers</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="go('orh')">Desvio ORH</div>
+  <div class="tab" onclick="go('dpph')">DPPH</div>
+  <div class="tab" onclick="go('stops')">Desvio Paradas</div>
+  <div class="tab" onclick="go('compare')">Heatmap Comparativo</div>
+  <div class="tab" onclick="go('table')">Tabela Completa</div>
+</div>
+
+<div id="tab-orh"   class="panel active"></div>
+<div id="tab-dpph"  class="panel"></div>
+<div id="tab-stops" class="panel"></div>
+<div id="tab-compare" class="panel"></div>
+<div id="tab-table"  class="panel"></div>
+
+<div class="tooltip" id="tt"></div>
+
+<script>
+const DATA = [{"career":"NEWBIE","metric":"ORH_DEV","metric_label":"Desvio ORH (%)","n":119534,"n_churn":28058,"n_active":91476,"pearson_r":0.037,"pearson_p":1.64e-37,"spearman_r":0.0193,"spearman_p":2.24e-11,"mean_churn":142.88,"mean_active":104.2,"delta":38.68},{"career":"NEW HIRE","metric":"ORH_DEV","metric_label":"Desvio ORH (%)","n":294539,"n_churn":153491,"n_active":141048,"pearson_r":0.0519,"pearson_p":9.91e-175,"spearman_r":0.0783,"spearman_p":0,"mean_churn":234.17,"mean_active":154.96,"delta":79.21},{"career":"TENURED","metric":"ORH_DEV","metric_label":"Desvio ORH (%)","n":130933,"n_churn":24179,"n_active":106754,"pearson_r":0.0304,"pearson_p":3.68e-28,"spearman_r":0.0138,"spearman_p":6.36e-7,"mean_churn":111.78,"mean_active":85.69,"delta":26.09},{"career":"VETERAN","metric":"ORH_DEV","metric_label":"Desvio ORH (%)","n":246011,"n_churn":25768,"n_active":220243,"pearson_r":0.0308,"pearson_p":1.06e-52,"spearman_r":0.0225,"spearman_p":5.86e-29,"mean_churn":89.36,"mean_active":61.77,"delta":27.59},{"career":"NEWBIE","metric":"DPPH","metric_label":"DPPH (entregas/h produtiva)","n":119534,"n_churn":28058,"n_active":91476,"pearson_r":-0.0222,"pearson_p":1.66e-14,"spearman_r":-0.0355,"spearman_p":9.88e-35,"mean_churn":11.07,"mean_active":11.36,"delta":-0.3},{"career":"NEW HIRE","metric":"DPPH","metric_label":"DPPH (entregas/h produtiva)","n":294539,"n_churn":153491,"n_active":141048,"pearson_r":-0.0652,"pearson_p":4.82e-275,"spearman_r":-0.1018,"spearman_p":0,"mean_churn":8.94,"mean_active":9.64,"delta":-0.71},{"career":"TENURED","metric":"DPPH","metric_label":"DPPH (entregas/h produtiva)","n":130933,"n_churn":24179,"n_active":106754,"pearson_r":-0.0219,"pearson_p":2.36e-15,"spearman_r":-0.0294,"spearman_p":1.8e-26,"mean_churn":11.79,"mean_active":12.07,"delta":-0.28},{"career":"VETERAN","metric":"DPPH","metric_label":"DPPH (entregas/h produtiva)","n":246011,"n_churn":25768,"n_active":220243,"pearson_r":-0.0454,"pearson_p":3.25e-112,"spearman_r":-0.0542,"spearman_p":1.29e-159,"mean_churn":13.04,"mean_active":13.74,"delta":-0.7},{"career":"NEWBIE","metric":"STOPS_DEV","metric_label":"Desvio Paradas (%)","n":119534,"n_churn":28058,"n_active":91476,"pearson_r":0.0094,"pearson_p":0.00114,"spearman_r":-0.0364,"spearman_p":2.06e-36,"mean_churn":1.57,"mean_active":1.34,"delta":0.23},{"career":"NEW HIRE","metric":"STOPS_DEV","metric_label":"Desvio Paradas (%)","n":294539,"n_churn":153491,"n_active":141048,"pearson_r":0.0058,"pearson_p":0.00179,"spearman_r":-0.0799,"spearman_p":0,"mean_churn":1.44,"mean_active":1.3,"delta":0.14},{"career":"TENURED","metric":"STOPS_DEV","metric_label":"Desvio Paradas (%)","n":130933,"n_churn":24179,"n_active":106754,"pearson_r":0.0038,"pearson_p":0.168,"spearman_r":-0.0385,"spearman_p":3.08e-44,"mean_churn":1.44,"mean_active":1.38,"delta":0.06},{"career":"VETERAN","metric":"STOPS_DEV","metric_label":"Desvio Paradas (%)","n":246011,"n_churn":25768,"n_active":220243,"pearson_r":0.0063,"pearson_p":0.00165,"spearman_r":-0.0595,"spearman_p":1.45e-191,"mean_churn":1.56,"mean_active":1.43,"delta":0.13}];
+
+const COLORS={NEWBIE:'#2563EB','NEW HIRE':'#D97706',TENURED:'#059669',VETERAN:'#DC2626'};
+const CAREERS=['NEWBIE','NEW HIRE','TENURED','VETERAN'];
+const CLS={NEWBIE:'newbie','NEW HIRE':'newhire',TENURED:'tenured',VETERAN:'veteran'};
+const METRICS=['ORH_DEV','DPPH','STOPS_DEV'];
+const TAB_METRIC={orh:'ORH_DEV',dpph:'DPPH',stops:'STOPS_DEV'};
+
+function pFmt(p){
+  if(p===0||p<1e-300) return '<1e-300';
+  if(p<1e-10) return p.toExponential(1);
+  return p.toFixed(4);
+}
+function sigCls(p,r){ return r<0?'neg':p<0.05?'sig':'nosig'; }
+function sigLbl(p,r){ return r<0?'▼ Negativo':p<0.05?'✓ Sig.':'~ Marginal'; }
+
+function buildMetricPanel(metricKey, panelId){
+  const rows = DATA.filter(d=>d.metric===metricKey);
+  let html = `<div class="tiles-grid">`;
+  rows.forEach(d=>{
+    const sc=sigCls(d.pearson_p,d.pearson_r), scs=sigCls(d.spearman_p,d.spearman_r);
+    const dir = d.pearson_r<0 ? '▼ churnou menos' : '▲ churnou mais';
+    html+=`<div class="tile ${CLS[d.career]}">
+      <div class="tile-career">${d.career}</div>
+      <div class="tile-row"><span class="tile-label">Pearson r</span><span class="tile-val ${sc}">${d.pearson_r>0?'+':''}${d.pearson_r}</span></div>
+      <div class="tile-row"><span class="tile-label">Spearman r</span><span class="tile-val ${scs}">${d.spearman_r>0?'+':''}${d.spearman_r}</span></div>
+      <div class="tile-row" style="margin-top:6px"><span class="tile-label">Δ médio</span><span class="tile-val" style="font-size:13px;color:${d.delta>=0?'var(--red)':'var(--green)'}">${d.delta>0?'+':''}${d.delta}</span></div>
+      <div class="tile-note">n=${d.n.toLocaleString('pt-BR')} · p=${pFmt(d.pearson_p)}<br>${dir}</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // bar compare
+  html += `<div class="section-title">Média por status — ${rows[0].metric_label}</div><div class="bar-grid">`;
+  rows.forEach(d=>{
+    const color=COLORS[d.career];
+    const maxV=Math.max(d.mean_churn,d.mean_active)*1.15||1;
+    const bW=160;
+    html+=`<div class="bar-card">
+      <div class="bar-card-title" style="color:${color}">${d.career}</div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Churned (n=${d.n_churn.toLocaleString('pt-BR')})</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:${d.mean_churn/maxV*bW}px;height:13px;background:${color};border-radius:3px;opacity:.9;min-width:2px"></div>
+          <span style="font-size:13px;font-weight:700;color:${d.delta>=0?'var(--red)':'var(--green)'}">${d.mean_churn}</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Ativo (n=${d.n_active.toLocaleString('pt-BR')})</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:${d.mean_active/maxV*bW}px;height:13px;background:${color};border-radius:3px;opacity:.4;min-width:2px"></div>
+          <span style="font-size:13px;font-weight:700;color:var(--muted)">${d.mean_active}</span>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--muted)">Δ = <strong style="color:${d.delta>=0?'var(--red)':'var(--green)'}">${d.delta>0?'+':''}${d.delta}</strong></div>
+    </div>`;
+  });
+  html += `</div>`;
+  document.getElementById(panelId).innerHTML = html;
+}
+
+function buildHeatmap(){
+  const corrs = ['pearson_r','spearman_r'];
+  const mLabels = {'ORH_DEV':'Desvio ORH','DPPH':'DPPH','STOPS_DEV':'Desvio Paradas'};
+  let html = `<div class="section-title" style="margin-bottom:16px">Pearson r e Spearman r — todas as métricas e carreiras</div>
+  <div class="heatmap-wrap"><table class="hm"><thead><tr><th>Carreira</th>`;
+  METRICS.forEach(m=>{
+    html+=`<th colspan="2">${mLabels[m]}</th>`;
+  });
+  html+=`</tr><tr><th></th>`;
+  METRICS.forEach(()=>{ html+=`<th>Pearson r</th><th>Spearman r</th>`; });
+  html+=`</tr></thead><tbody>`;
+
+  CAREERS.forEach(career=>{
+    html+=`<tr><td class="career" style="color:${COLORS[career]}">${career}</td>`;
+    METRICS.forEach(m=>{
+      const d=DATA.find(r=>r.career===career&&r.metric===m);
+      ['pearson_r','spearman_r'].forEach(c=>{
+        const v=d[c];
+        const cls=v>0.03?'cell-pos':v<-0.03?'cell-neg':'cell-zero';
+        const p=c==='pearson_r'?d.pearson_p:d.spearman_p;
+        const sig=p<0.05?'':'*';
+        html+=`<td class="${cls}" data-tip="${career} · ${mLabels[m]} · ${c==='pearson_r'?'Pearson':'Spearman'}: r=${v>0?'+':''}${v} · p=${pFmt(p)}">${v>0?'+':''}${v}${sig}</td>`;
+      });
+    });
+    html+=`</tr>`;
+  });
+  html+=`</tbody></table>
+  <p style="font-size:11px;color:var(--sub);margin-top:10px">* p ≥ 0.05 (não significativo ao nível 5%). Verde = correlação positiva com churn. Vermelho = negativa. Passe o mouse nas células para detalhes.</p>
+  </div>`;
+
+  // ranking insight
+  html += `<div style="margin-top:24px">
+    <div class="section-title">Ranking de força da correlação (|r| Spearman)</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:0">`;
+  const ranked = [];
+  CAREERS.forEach(career=>{
+    METRICS.forEach(m=>{
+      const d=DATA.find(r=>r.career===career&&r.metric===m);
+      ranked.push({career,m,sr:d.spearman_r,sp:d.spearman_p});
+    });
+  });
+  ranked.sort((a,b)=>Math.abs(b.sr)-Math.abs(a.sr));
+  const mL={'ORH_DEV':'ORH','DPPH':'DPPH','STOPS_DEV':'Paradas'};
+  ranked.forEach((r,i)=>{
+    const barW = Math.abs(r.sr)/0.12*200;
+    const color = r.sr<0?'var(--red)':COLORS[r.career];
+    const sig = r.sp<0.05?'':'opacity:.4';
+    html+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;${sig}">
+      <span style="width:90px;font-size:11px;color:${COLORS[r.career]};font-weight:700">${r.career}</span>
+      <span style="width:52px;font-size:11px;color:var(--muted)">${mL[r.m]}</span>
+      <div style="width:${barW}px;height:10px;background:${color};border-radius:3px;min-width:2px"></div>
+      <span style="font-size:12px;font-weight:700;color:${color}">${r.sr>0?'+':''}${r.sr}</span>
+    </div>`;
+  });
+  html+=`</div></div>`;
+
+  document.getElementById('tab-compare').innerHTML = html;
+  attachTooltips();
+}
+
+function buildTable(){
+  let html = `<div style="overflow-x:auto"><table class="stat-table"><thead><tr>
+    <th>Carreira</th><th>Métrica</th><th>n</th><th>Churned</th>
+    <th>Pearson r</th><th>p Pearson</th>
+    <th>Spearman r</th><th>p Spearman</th>
+    <th>Média Churn</th><th>Média Ativo</th><th>Δ</th><th>Sinal</th>
+  </tr></thead><tbody>`;
+  DATA.forEach(d=>{
+    const sc=sigCls(d.pearson_p,d.pearson_r);
+    const scs=sigCls(d.spearman_p,d.spearman_r);
+    const pillCls=d.pearson_r<0?'pill-red':d.pearson_p<0.05?'pill-green':'pill-yellow';
+    const pillLbl=d.pearson_r<0?'Negativo':d.pearson_p<0.05?'Sig.':'Marginal';
+    html+=`<tr>
+      <td style="color:${COLORS[d.career]};font-weight:700">${d.career}</td>
+      <td>${d.metric_label}</td>
+      <td>${d.n.toLocaleString('pt-BR')}</td>
+      <td>${d.n_churn.toLocaleString('pt-BR')}</td>
+      <td class="${sc}">${d.pearson_r>0?'+':''}${d.pearson_r}</td>
+      <td style="color:var(--muted)">${pFmt(d.pearson_p)}</td>
+      <td class="${scs}">${d.spearman_r>0?'+':''}${d.spearman_r}</td>
+      <td style="color:var(--muted)">${pFmt(d.spearman_p)}</td>
+      <td>${d.mean_churn}</td>
+      <td>${d.mean_active}</td>
+      <td style="color:${d.delta>=0?'var(--red)':'var(--green)';font-weight:700}">${d.delta>0?'+':''}${d.delta}</td>
+      <td><span class="pill ${pillCls}">${pillLbl}</span></td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  document.getElementById('tab-table').innerHTML = html;
+}
+
+function attachTooltips(){
+  const tt=document.getElementById('tt');
+  document.querySelectorAll('[data-tip]').forEach(el=>{
+    el.style.cursor='help';
+    el.addEventListener('mouseenter',()=>{ tt.textContent=el.dataset.tip; tt.style.display='block'; });
+    el.addEventListener('mousemove',e=>{ tt.style.left=(e.clientX+14)+'px'; tt.style.top=(e.clientY-10)+'px'; });
+    el.addEventListener('mouseleave',()=>{ tt.style.display='none'; });
+  });
+}
+
+function go(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  const idx={orh:0,dpph:1,stops:2,compare:3,table:4}[name];
+  document.querySelectorAll('.tab')[idx].classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// INIT
+buildMetricPanel('ORH_DEV','tab-orh');
+buildMetricPanel('DPPH','tab-dpph');
+buildMetricPanel('STOPS_DEV','tab-stops');
+buildHeatmap();
+buildTable();
+attachTooltips();
+</script>
+</body>
+</html>
