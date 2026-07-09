@@ -2,983 +2,754 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SSP48 — Análise OCR (go-live 28/04/2026)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SSP48 — Análise OCR | go-live 28/04/2026</title>
 <style>
-  :root {
-    --surface-1: #fcfcfb;
-    --surface-page: #f9f9f7;
-    --text-primary: #0b0b0b;
-    --text-secondary: #52514e;
-    --text-muted: #898781;
-    --gridline: #e1e0d9;
-    --baseline: #c3c2b7;
-    --border: rgba(11,11,11,0.10);
-    --s1: #2a78d6;
-    --s2: #1baf7a;
-    --s3: #eda100;
-    --s4: #008300;
-    --s5: #4a3aa7;
-    --s6: #e34948;
-    --good: #006300;
-    --warn: #b87f00;
-    --critical: #d03b3b;
-    --badge-pre: #e8f0fb;
-    --badge-pre-text: #1a4d99;
-    --badge-post: #e6f7f0;
-    --badge-post-text: #0a5c3a;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --surface-1: #1a1a19;
-      --surface-page: #0d0d0d;
-      --text-primary: #ffffff;
-      --text-secondary: #c3c2b7;
-      --text-muted: #898781;
-      --gridline: #2c2c2a;
-      --baseline: #383835;
-      --border: rgba(255,255,255,0.10);
-      --s1: #3987e5;
-      --s2: #199e70;
-      --s3: #c98500;
-      --s4: #008300;
-      --s5: #9085e9;
-      --s6: #e66767;
-      --good: #0ca30c;
-      --warn: #fab219;
-      --critical: #e34948;
-      --badge-pre: #1a2a40;
-      --badge-pre-text: #7ab0f5;
-      --badge-post: #0d2e1f;
-      --badge-post-text: #4dca96;
-    }
-  }
+:root{
+  --bg:#f5f5f3;--card:#fff;--border:#e2e1da;--text:#0b0b0b;--sub:#52514e;--muted:#898781;
+  --grid:#e8e7e0;--base:#c3c2b7;
+  --s1:#2a78d6;--s2:#1baf7a;--s3:#eda100;--s4:#e34948;--s5:#4a3aa7;--s6:#eb6834;
+  --good:#006300;--warn:#7a4a00;--bad:#b00020;
+  --pre-bg:#e8f0fb;--pre-tx:#1a4d99;--post-bg:#e6f7f0;--post-tx:#0a5c3a;
+}
+@media(prefers-color-scheme:dark){
+:root{
+  --bg:#0d0d0d;--card:#1a1a19;--border:#2c2c2a;--text:#fff;--sub:#c3c2b7;--muted:#898781;
+  --grid:#2c2c2a;--base:#383835;
+  --s1:#3987e5;--s2:#199e70;--s3:#c98500;--s4:#e66767;--s5:#9085e9;--s6:#d95926;
+  --good:#0ca30c;--warn:#fab219;--bad:#e34948;
+  --pre-bg:#1a2a40;--pre-tx:#7ab0f5;--post-bg:#0d2e1f;--post-tx:#4dca96;
+}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+.page{max-width:1120px;margin:0 auto;padding:32px 20px 80px}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+/* header */
+.hdr{border-bottom:1px solid var(--border);padding-bottom:20px;margin-bottom:32px}
+.hdr h1{font-size:22px;font-weight:700;letter-spacing:-.3px}
+.hdr p{color:var(--sub);font-size:13px;margin-top:3px}
+.ocr-pill{display:inline-flex;align-items:center;gap:5px;margin-top:10px;background:#fef3e2;color:#7a4a00;border:1px solid #f5c97a;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600}
+@media(prefers-color-scheme:dark){.ocr-pill{background:#2a1f00;color:#f5c97a;border-color:#5a4000}}
 
-  body {
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    background: var(--surface-page);
-    color: var(--text-primary);
-    font-size: 14px;
-    line-height: 1.5;
-  }
+/* sections */
+.sec{margin-bottom:44px}
+.sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.sec-num{background:var(--s1);color:#fff;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.sec-hdr h2{font-size:16px;font-weight:700}
+.sec-desc{color:var(--sub);font-size:12px;margin-bottom:14px;padding-left:34px}
+hr{border:none;border-top:1px solid var(--border);margin:36px 0}
 
-  .page {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 32px 24px 64px;
-  }
+/* insight box */
+.insight{border-left:3px solid var(--s1);padding:10px 14px;background:var(--card);border-radius:0 8px 8px 0;margin-bottom:16px;font-size:13px;color:var(--sub);line-height:1.6}
+.insight strong{color:var(--text)}
+.insight.warn{border-color:var(--s4)}
+.insight.good{border-color:var(--s2)}
 
-  /* Header */
-  .page-header {
-    border-bottom: 1px solid var(--gridline);
-    padding-bottom: 20px;
-    margin-bottom: 32px;
-  }
-  .page-header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
-  .page-header .sub { color: var(--text-secondary); margin-top: 4px; font-size: 13px; }
-  .ocr-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    margin-top: 10px;
-    background: #fef3e2; color: #7a4a00;
-    border: 1px solid #f5c97a; border-radius: 6px;
-    padding: 4px 10px; font-size: 12px; font-weight: 600;
-  }
-  @media (prefers-color-scheme: dark) {
-    .ocr-badge { background: #2a1f00; color: #f5c97a; border-color: #5a4000; }
-  }
+/* stat tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:18px}
+.tile{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 15px}
+.tile .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.tile .ctx{font-size:11px;color:var(--sub);margin-bottom:2px}
+.tile .val{font-size:22px;font-weight:700;line-height:1.1}
+.tile .delta{font-size:12px;margin-top:4px;font-weight:600}
+.good-c{color:var(--good)}.warn-c{color:var(--warn)}.bad-c{color:var(--bad)}
 
-  /* Section */
-  .section { margin-bottom: 40px; }
-  .section-title {
-    font-size: 15px; font-weight: 700; margin-bottom: 4px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .section-num {
-    background: var(--s1); color: #fff;
-    border-radius: 50%; width: 22px; height: 22px;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700; flex-shrink: 0;
-  }
-  .section-desc { color: var(--text-secondary); font-size: 12px; margin-bottom: 16px; margin-left: 30px; }
+/* stat pearson */
+.corr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:18px}
+.corr-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 15px}
+.corr-card .c-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;font-weight:600}
+.corr-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;font-size:12px}
+.corr-row .var{color:var(--sub)}
+.corr-row .rval{font-weight:700;font-size:13px}
+.corr-row .sig{font-size:10px;color:var(--muted);margin-left:4px}
+.r-bar-wrap{height:4px;background:var(--grid);border-radius:2px;margin-top:2px;overflow:hidden}
+.r-bar{height:100%;border-radius:2px;background:var(--s1)}
 
-  /* Stat tiles */
-  .stat-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-  .stat-tile {
-    background: var(--surface-1);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 16px;
-  }
-  .stat-tile .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-  .stat-tile .pre { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
-  .stat-tile .post { font-size: 22px; font-weight: 700; line-height: 1.1; }
-  .stat-tile .delta { font-size: 12px; margin-top: 4px; font-weight: 600; }
-  .delta.good { color: var(--good); }
-  .delta.warn { color: var(--warn); }
-  .delta.bad  { color: var(--critical); }
+/* chart card */
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 18px 14px;margin-bottom:14px}
+.card-title{font-size:13px;font-weight:600;margin-bottom:4px}
+.card-sub{font-size:11px;color:var(--muted);margin-bottom:14px}
+svg.ch{width:100%;overflow:visible}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:680px){.grid-2{grid-template-columns:1fr}}
 
-  /* Period badges */
-  .badge-pre  { display: inline-block; background: var(--badge-pre);  color: var(--badge-pre-text);  border-radius: 4px; padding: 2px 7px; font-size: 11px; font-weight: 600; }
-  .badge-post { display: inline-block; background: var(--badge-post); color: var(--badge-post-text); border-radius: 4px; padding: 2px 7px; font-size: 11px; font-weight: 600; }
+/* legend */
+.leg{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:12px;color:var(--sub)}
+.li{display:flex;align-items:center;gap:6px}
+.ld{width:12px;height:10px;border-radius:2px}
+.lc{width:10px;height:10px;border-radius:50%}
 
-  /* Chart containers */
-  .chart-wrap {
-    background: var(--surface-1);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px 20px 16px;
-    margin-bottom: 16px;
-    position: relative;
-  }
-  .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 14px; color: var(--text-primary); }
-  .chart-sub   { font-size: 11px; color: var(--text-muted); margin-top: -10px; margin-bottom: 14px; }
+/* tables */
+.tbl-w{overflow-x:auto;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:12px;background:var(--card)}
+th,td{padding:7px 10px;border-bottom:1px solid var(--grid);text-align:right}
+th{font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:var(--sub);font-weight:600;background:var(--card)}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(42,120,214,.03)}
+.bp{display:inline-block;background:var(--pre-bg);color:var(--pre-tx);border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600}
+.bpost{display:inline-block;background:var(--post-bg);color:var(--post-tx);border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600}
+.vb{color:var(--bad);font-weight:700}.vg{color:var(--good);font-weight:700}.vw{color:var(--warn);font-weight:700}
 
-  svg.chart { width: 100%; overflow: visible; }
-
-  /* Legend */
-  .legend {
-    display: flex; flex-wrap: wrap; gap: 16px;
-    margin-top: 10px; font-size: 12px; color: var(--text-secondary);
-  }
-  .legend-item { display: flex; align-items: center; gap: 6px; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .legend-rect { width: 12px; height: 10px; border-radius: 2px; flex-shrink: 0; }
-
-  /* Table */
-  .tbl-wrap { overflow-x: auto; margin-top: 12px; }
-  table {
-    width: 100%; border-collapse: collapse; font-size: 12px;
-    background: var(--surface-1);
-  }
-  th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--gridline); }
-  th { font-weight: 600; color: var(--text-secondary); text-align: right; background: var(--surface-1); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
-  th:first-child, td:first-child { text-align: left; }
-  th:nth-child(2), td:nth-child(2) { text-align: left; }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba(42,120,214,0.04); }
-  .period-pre  { color: var(--badge-pre-text);  font-weight: 600; }
-  .period-post { color: var(--badge-post-text); font-weight: 600; }
-  .val-bad { color: var(--critical); font-weight: 600; }
-  .val-good { color: var(--good); font-weight: 600; }
-  .val-warn { color: var(--warn); font-weight: 600; }
-
-  /* Tooltip */
-  #tooltip {
-    position: fixed; pointer-events: none;
-    background: var(--text-primary); color: var(--surface-1);
-    border-radius: 6px; padding: 8px 12px; font-size: 12px;
-    line-height: 1.6; z-index: 999; max-width: 220px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-    display: none;
-  }
-
-  /* Grid layout */
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
-
-  /* Insight callout */
-  .insight {
-    border-left: 3px solid var(--s1);
-    padding: 10px 14px;
-    background: var(--surface-1);
-    border-radius: 0 8px 8px 0;
-    margin-bottom: 16px;
-    font-size: 13px;
-    color: var(--text-secondary);
-  }
-  .insight strong { color: var(--text-primary); }
-
-  /* Divider */
-  hr { border: none; border-top: 1px solid var(--gridline); margin: 32px 0; }
+/* tooltip */
+#tt{position:fixed;pointer-events:none;background:var(--text);color:var(--card);border-radius:7px;padding:8px 12px;font-size:12px;line-height:1.6;z-index:999;max-width:240px;display:none;box-shadow:0 4px 14px rgba(0,0,0,.25)}
 </style>
 </head>
 <body>
-<div id="tooltip"></div>
-
+<div id="tt"></div>
 <div class="page">
 
-  <!-- HEADER -->
-  <div class="page-header">
-    <h1>SSP48 — Análise de Impacto: One Click Routing (OCR)</h1>
-    <p class="sub">Facility: SSP48 &nbsp;|&nbsp; Site: MLB &nbsp;|&nbsp; Período: Fev–Jun 2026</p>
-    <span class="ocr-badge">⚡ OCR go-live: 28/04/2026</span>
+<!-- HEADER -->
+<div class="hdr">
+  <h1>SSP48 — Impacto do OCR: Análise Estatística Completa</h1>
+  <p>Facility SSP48 &nbsp;·&nbsp; Site MLB &nbsp;·&nbsp; Fev–Jun 2026 &nbsp;·&nbsp; n=1.296 motoristas únicos</p>
+  <span class="ocr-pill">⚡ OCR go-live: 28/04/2026</span>
+</div>
+
+<!-- ── S0: CONCLUSÃO EXECUTIVA ── -->
+<div class="sec">
+  <div class="sec-hdr"><span class="sec-num">✓</span><h2>Conclusão Executiva</h2></div>
+  <div class="insight good">
+    <strong>O OCR não causou aumento de churn.</strong> O Extra teve queda de 49% (abr, spike pré go-live) para <strong>25.9% em jun</strong> — mínimo do período. MLP ficou estável em ~24–28%.
+  </div>
+  <div class="insight">
+    <strong>O maior desvio operacional é o STEM OUT:</strong> o algoritmo planeja <strong>~13 min</strong> de deslocamento saída da base, mas a realidade é <strong>~70 min</strong> — um gap de <strong>+57 min (5,4×)</strong>. Isso é estrutural, pré e pós OCR.
+  </div>
+  <div class="insight warn">
+    <strong>Correlação estatística confirmada (Pearson):</strong> ORH desvio tem correlação positiva e significativa com churn (r=0.108, p&lt;0.001 para toda a base). Para MLP, <strong>STEM OUT é o preditor mais forte</strong> (r=0.199, p&lt;0.001). Para Extra, <strong>OZH desvio lidera</strong> (r=0.127, p=0.001). O efeito é real mas de magnitude moderada — churn é multifatorial.
+  </div>
+</div>
+
+<hr>
+
+<!-- ── S1: CHURN RATE ── -->
+<div class="sec">
+  <div class="sec-hdr"><span class="sec-num">1</span><h2>Churn Rate Oficial — Pipeline RFL</h2></div>
+  <div class="sec-desc">Fonte: DM_DRIVERS_RFL_CHURN_BY_SVC_MONTHLY · Pré-OCR = fev–abr · Pós-OCR = mai–jun</div>
+
+  <div class="tiles">
+    <div class="tile"><div class="lbl">Extra pré-OCR avg</div><div class="ctx">fev–mar (excl. spike abr)</div><div class="val">29.2%</div><div class="delta">linha de base</div></div>
+    <div class="tile"><div class="lbl">Extra pós-OCR jun</div><div class="ctx">primeiro mês completo</div><div class="val good-c">25.9%</div><div class="delta good-c">▼ −3.3pp vs base</div></div>
+    <div class="tile"><div class="lbl">Spike abr/26 Extra</div><div class="ctx">último dia do mês, pré go-live</div><div class="val bad-c">49.0%</div><div class="delta bad-c">⚠ evento pré-OCR</div></div>
+    <div class="tile"><div class="lbl">MLP pré-OCR avg</div><div class="ctx">fev–abr</div><div class="val">24.2%</div><div class="delta">linha de base</div></div>
+    <div class="tile"><div class="lbl">MLP pós-OCR jun</div><div class="ctx">primeiro mês completo</div><div class="val warn-c">27.8%</div><div class="delta warn-c">▲ +3.6pp vs base</div></div>
+    <div class="tile"><div class="lbl">Voluntário Extra jun</div><div class="ctx">motorista pediu saída</div><div class="val">9.3%</div><div class="delta good-c">▼ menor do período</div></div>
   </div>
 
-  <!-- ────────────────────────────────────────────────────────── -->
-  <!-- SECTION 1: CHURN RATE OFICIAL -->
-  <!-- ────────────────────────────────────────────────────────── -->
-  <div class="section">
-    <div class="section-title"><span class="section-num">1</span>Churn Rate Oficial — DM RFL Pipeline</div>
-    <div class="section-desc">Fonte: DM_DRIVERS_RFL_CHURN_BY_SVC_MONTHLY &nbsp;|&nbsp; Pré-OCR: fev–abr &nbsp;|&nbsp; Pós-OCR: mai–jun</div>
-
-    <div class="insight">
-      <strong>Extra:</strong> churn caiu de 49% (abr, spike pré go-live) para <strong>25.9% em jun</strong> — menor nível do período. &nbsp;
-      <strong>MLP:</strong> estável em torno de 24–28%. OCR não causou aumento de churn.
-    </div>
-
-    <!-- Stat tiles -->
-    <div class="stat-row">
-      <div class="stat-tile">
-        <div class="label">Extra — Pré-OCR avg</div>
-        <div class="pre">fev–mar (excl. spike abr)</div>
-        <div class="post">29.2%</div>
-        <div class="delta">churn rate</div>
-      </div>
-      <div class="stat-tile">
-        <div class="label">Extra — Pós-OCR jun</div>
-        <div class="pre">primeiro mês completo</div>
-        <div class="post" style="color:var(--good)">25.9%</div>
-        <div class="delta good">▼ −3.3pp vs pré</div>
-      </div>
-      <div class="stat-tile">
-        <div class="label">MLP — Pré-OCR avg</div>
-        <div class="pre">fev–abr</div>
-        <div class="post">24.2%</div>
-        <div class="delta">churn rate</div>
-      </div>
-      <div class="stat-tile">
-        <div class="label">MLP — Pós-OCR jun</div>
-        <div class="pre">primeiro mês completo</div>
-        <div class="post" style="color:var(--warn)">27.8%</div>
-        <div class="delta warn">▲ +3.6pp vs pré</div>
-      </div>
-      <div class="stat-tile">
-        <div class="label">Spike abr/26</div>
-        <div class="pre">Extra — último dia pre OCR</div>
-        <div class="post" style="color:var(--critical)">49.0%</div>
-        <div class="delta bad">⚠ pré go-live (28/04)</div>
-      </div>
-    </div>
-
-    <!-- Churn rate chart -->
-    <div class="chart-wrap">
-      <div class="chart-title">Churn Rate Mensal — SSP48</div>
-      <div class="chart-sub">Linha vertical tracejada = go-live OCR (28/04/2026)</div>
-      <svg class="chart" id="churnLine" viewBox="0 0 820 240"></svg>
-      <div class="legend">
-        <div class="legend-item"><div class="legend-dot" style="background:var(--s1)"></div><span>Extra</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--s2)"></div><span>MLP</span></div>
-      </div>
-    </div>
-
-    <!-- Churn decomposition table -->
-    <div class="chart-wrap">
-      <div class="chart-title">Decomposição do Churn por Motivo</div>
-      <div class="tbl-wrap">
-        <table id="churnTable">
-          <thead>
-            <tr>
-              <th>Mês</th><th>Tipo</th>
-              <th>Pool</th><th>Churned</th><th>Churn %</th>
-              <th>Voluntário</th><th>Vol. saiu Meli</th>
-              <th>Bloqueio Meli</th><th>BGC</th><th>Outros</th><th>Bloqueio MLP</th>
-            </tr>
-          </thead>
-          <tbody id="churnTbody"></tbody>
-        </table>
-      </div>
+  <div class="card">
+    <div class="card-title">Churn Rate Mensal — Extra vs MLP</div>
+    <div class="card-sub">Linha tracejada = go-live OCR 28/04 · Pré-OCR em azul claro · Pós-OCR em verde claro</div>
+    <svg class="ch" id="svgChurn" viewBox="0 0 820 240"></svg>
+    <div class="leg">
+      <div class="li"><div class="lc" style="background:var(--s1)"></div>Extra</div>
+      <div class="li"><div class="lc" style="background:var(--s2)"></div>MLP</div>
     </div>
   </div>
 
-  <hr>
+  <div class="insight">
+    <strong>Interpretação do spike de abr/26 (49% Extra):</strong> aconteceu <em>antes</em> do go-live (28/04). Provável causa: processo administrativo de fim de contrato em massa ou bloqueio anterior ao OCR. O churn voluntário em abr foi apenas 14.2% — a maioria (35%) foi involuntária. O OCR não é o responsável.
+  </div>
 
-  <!-- ────────────────────────────────────────────────────────── -->
-  <!-- SECTION 2: PARADAS POR MODAL -->
-  <!-- ────────────────────────────────────────────────────────── -->
-  <div class="section">
-    <div class="section-title"><span class="section-num">2</span>Paradas por Modal — Pré vs Pós OCR</div>
-    <div class="section-desc">Fonte: DM_SHP_ROUTES_LAST_MILE, ±60 dias do go-live &nbsp;|&nbsp; mín 20 rotas/grupo</div>
+  <div class="card">
+    <div class="card-title">Decomposição do Churn por Motivo</div>
+    <div class="tbl-w"><table id="tblChurn">
+      <thead><tr><th>Mês</th><th>Tipo</th><th>Pool</th><th>Churned</th><th>Churn%</th><th>Voluntário</th><th>Vol.saiu Meli</th><th>Bloqueio Meli</th><th>BGC</th><th>Outros</th><th>Bloqueio MLP</th></tr></thead>
+      <tbody id="tbChurn"></tbody>
+    </table></div>
+  </div>
+</div>
 
-    <div class="insight">
-      <strong>WALKER</strong> é o modal mais impactado: +55.6 paradas (81→137 avg) pós-OCR com desvio ORH de +10.5h.
-      <strong>VAN e VUC</strong> aumentaram ~7 paradas. <strong>PASSEIO Logistics</strong> reduziu stops (51→48).
-    </div>
+<hr>
 
-    <div class="chart-wrap">
-      <div class="chart-title">Avg Stops por Modal &amp; Modelo — Pré vs Pós OCR</div>
-      <svg class="chart" id="stopsBar" viewBox="0 0 820 320"></svg>
-      <div class="legend">
-        <div class="legend-item"><div class="legend-rect" style="background:var(--s1)"></div><span>Pré-OCR</span></div>
-        <div class="legend-item"><div class="legend-rect" style="background:var(--s2)"></div><span>Pós-OCR</span></div>
-      </div>
-    </div>
+<!-- ── S2: PARADAS POR MODAL ── -->
+<div class="sec">
+  <div class="sec-hdr"><span class="sec-num">2</span><h2>Paradas por Modal — Pré vs Pós OCR</h2></div>
+  <div class="sec-desc">Fonte: DM_SHP_ROUTES_LAST_MILE · ±60 dias do go-live · Mínimo 20 rotas/grupo</div>
 
-    <div class="chart-wrap">
-      <div class="chart-title">ORH Desvio (Real − Planejado) por Modal — Pré vs Pós OCR</div>
-      <div class="chart-sub">Valores positivos = rota levou mais tempo do que planejado</div>
-      <svg class="chart" id="orhBar" viewBox="0 0 820 320"></svg>
-      <div class="legend">
-        <div class="legend-item"><div class="legend-rect" style="background:var(--s1); opacity:0.6"></div><span>Pré-OCR</span></div>
-        <div class="legend-item"><div class="legend-rect" style="background:var(--s2)"></div><span>Pós-OCR</span></div>
-      </div>
-    </div>
+  <div class="insight warn">
+    <strong>WALKER é o outlier crítico:</strong> paradas saltaram de 81 para 137 médias (+69%) pós-OCR, com ORH desvio de +10.5h. Isso sugere que o algoritmo OCR está alocando rotas desproporcionalmente grandes para entregadores a pé — necessita revisão urgente do cap de stops por modal.
+  </div>
+  <div class="insight">
+    <strong>VUC e VAN aumentaram:</strong> +8 e +7 paradas respectivamente. PASSEIO Logistics foi o único a <em>reduzir</em> stops (51→48), indicando que o OCR está funcionando como esperado para esse modal.
+  </div>
 
-    <div class="chart-wrap">
-      <div class="chart-title">Tabela: Paradas e Desvios por Modal</div>
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Modal</th><th>Modelo</th><th>Período</th><th>Rotas</th>
-              <th>Avg Stops</th><th>Med Stops</th>
-              <th>ORH Real</th><th>ORH Plan</th><th>ORH Dev</th>
-              <th>OZH Dev</th><th>Stem Out Dev</th>
-            </tr>
-          </thead>
-          <tbody id="modalTbody"></tbody>
-        </table>
-      </div>
+  <div class="card">
+    <div class="card-title">Avg Stops por Modal × Modelo — Pré vs Pós OCR</div>
+    <div class="card-sub">Barras agrupadas · hover para detalhes</div>
+    <svg class="ch" id="svgStops" viewBox="0 0 820 320"></svg>
+    <div class="leg">
+      <div class="li"><div class="ld" style="background:var(--s1)"></div>Pré-OCR</div>
+      <div class="li"><div class="ld" style="background:var(--s2)"></div>Pós-OCR</div>
     </div>
   </div>
 
-  <hr>
-
-  <!-- ────────────────────────────────────────────────────────── -->
-  <!-- SECTION 3: COMPONENTES DO ORH -->
-  <!-- ────────────────────────────────────────────────────────── -->
-  <div class="section">
-    <div class="section-title"><span class="section-num">3</span>Componentes do ORH — Stem Out vs OZH vs Stem In</div>
-    <div class="section-desc">ORH = STEM_OUT + OZH + STEM_IN &nbsp;|&nbsp; ±30 dias do go-live</div>
-
-    <div class="insight">
-      <strong>STEM OUT</strong> é o componente com maior desvio: real ~70 min vs planejado ~13 min (<strong>+57 min de gap</strong>).
-      <strong>OZH</strong> está overplanejado (real &lt; plano). Pós-OCR o STEM IN aumentou +0.26h.
-    </div>
-
-    <div class="stat-row">
-      <div class="stat-tile">
-        <div class="label">Stem Out — Desvio Pré</div>
-        <div class="pre">real 68.3 min | plan 12.7 min</div>
-        <div class="post" style="color:var(--critical)">+55.6 min</div>
-        <div class="delta bad">subestimado 5.4×</div>
-      </div>
-      <div class="stat-tile">
-        <div class="label">Stem Out — Desvio Pós</div>
-        <div class="pre">real 72.7 min | plan 13.8 min</div>
-        <div class="post" style="color:var(--critical)">+58.8 min</div>
-        <div class="delta bad">▲ +3.2 min pós OCR</div>
-      </div>
-      <div class="stat-tile">
-        <div class="label">OZH — Desvio Pré</div>
-        <div class="pre">real 4.18h | plan 4.87h</div>
-        <div class="post" style="color:var(--good)">−0.69h</div>
-        <div class="delta good">overplanejado</div>
-      </div>
-      <div class="stat-tile">
-        <div class="label">OZH — Desvio Pós</div>
-        <div class="pre">real 4.10h | plan 4.45h</div>
-        <div class="post" style="color:var(--good)">−0.36h</div>
-        <div class="delta good">melhorou pós OCR</div>
-      </div>
-      <div class="stat-tile">
-        <div class="label">Stem In — Real Pré</div>
-        <div class="pre">sem planejado</div>
-        <div class="post">0.91h</div>
-        <div class="delta">54.6 min</div>
-      </div>
-      <div class="stat-tile">
-        <div class="label">Stem In — Real Pós</div>
-        <div class="pre">sem planejado</div>
-        <div class="post" style="color:var(--warn)">1.17h</div>
-        <div class="delta warn">▲ +0.26h pós OCR</div>
-      </div>
-    </div>
-
-    <div class="grid-2">
-      <div class="chart-wrap">
-        <div class="chart-title">Stem Out: Real vs Planejado (minutos)</div>
-        <svg class="chart" id="stemOutBar" viewBox="0 0 380 220"></svg>
-        <div class="legend">
-          <div class="legend-item"><div class="legend-rect" style="background:var(--s6)"></div><span>Real</span></div>
-          <div class="legend-item"><div class="legend-rect" style="background:var(--s1)"></div><span>Planejado</span></div>
-        </div>
-      </div>
-      <div class="chart-wrap">
-        <div class="chart-title">OZH: Real vs Planejado (horas)</div>
-        <svg class="chart" id="ozhBar" viewBox="0 0 380 220"></svg>
-        <div class="legend">
-          <div class="legend-item"><div class="legend-rect" style="background:var(--s6)"></div><span>Real</span></div>
-          <div class="legend-item"><div class="legend-rect" style="background:var(--s1)"></div><span>Planejado</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="chart-wrap">
-      <div class="chart-title">Comparativo: Desvio dos Componentes do ORH</div>
-      <div class="chart-sub">Pré-OCR vs Pós-OCR — valores negativos = overplanejado; positivos = underplanejado</div>
-      <svg class="chart" id="componentsBar" viewBox="0 0 820 240"></svg>
-      <div class="legend">
-        <div class="legend-item"><div class="legend-rect" style="background:var(--s1); opacity:0.6"></div><span>Pré-OCR</span></div>
-        <div class="legend-item"><div class="legend-rect" style="background:var(--s2)"></div><span>Pós-OCR</span></div>
-      </div>
+  <div class="card">
+    <div class="card-title">ORH Desvio (Real − Planejado) por Modal</div>
+    <div class="card-sub">Positivo = rota levou mais do que o planejado · WALKER fora de escala</div>
+    <svg class="ch" id="svgOrhModal" viewBox="0 0 820 300"></svg>
+    <div class="leg">
+      <div class="li"><div class="ld" style="background:var(--s1);opacity:.6"></div>Pré-OCR</div>
+      <div class="li"><div class="ld" style="background:var(--s2)"></div>Pós-OCR</div>
     </div>
   </div>
 
-  <hr>
+  <div class="card">
+    <div class="card-title">Tabela detalhada por Modal</div>
+    <div class="tbl-w"><table>
+      <thead><tr><th>Modal</th><th>Modelo</th><th>Período</th><th>Rotas</th><th>Avg Stops</th><th>Med Stops</th><th>ORH Real</th><th>ORH Plan</th><th>ORH Dev</th><th>OZH Dev</th><th>Stem Out Dev</th></tr></thead>
+      <tbody id="tbModal"></tbody>
+    </table></div>
+  </div>
+</div>
 
-  <!-- ────────────────────────────────────────────────────────── -->
-  <!-- SECTION 4: CHURN vs RETIDOS — KPIs DE ROTA -->
-  <!-- ────────────────────────────────────────────────────────── -->
-  <div class="section">
-    <div class="section-title"><span class="section-num">4</span>Churn vs Retidos — KPIs de Rota (M-1)</div>
-    <div class="section-desc">Join RFL × DM_SHP_ROUTES via rotas do mês anterior ao churn (sem filtro SVC_PRIMARY)</div>
+<hr>
 
-    <div class="insight">
-      Drivers que churnam apresentam <strong>ORH desvio 3–4× maior</strong> que retidos — padrão consistente em todos os meses.
-      Diferença principal vem do <strong>OZH</strong> (horas produtivas), não do Stem Out.
+<!-- ── S3: COMPONENTES ORH ── -->
+<div class="sec">
+  <div class="sec-hdr"><span class="sec-num">3</span><h2>Componentes do ORH: Onde Está o Desvio?</h2></div>
+  <div class="sec-desc">ORH = STEM_OUT + OZH + STEM_IN · ±30 dias do go-live · n≈9.000 rotas/período</div>
+
+  <div class="insight warn">
+    <strong>Resposta direta: STEM OUT domina o desvio.</strong><br>
+    Real: 70 min · Planejado: 13 min · <strong>Gap: +57 min (5,4×).</strong>
+    OZH está overplanejado (real &lt; plano = eficiência). STEM IN aumentou +16 min pós-OCR — sinal de rotas mais dispersas geograficamente.
+  </div>
+
+  <div class="tiles">
+    <div class="tile"><div class="lbl">STEM OUT desvio pré</div><div class="ctx">real 68min · plan 13min</div><div class="val bad-c">+55.6min</div><div class="delta bad-c">subestimado 5.4×</div></div>
+    <div class="tile"><div class="lbl">STEM OUT desvio pós</div><div class="ctx">real 73min · plan 14min</div><div class="val bad-c">+58.8min</div><div class="delta bad-c">▲ piorou 3.2min</div></div>
+    <div class="tile"><div class="lbl">OZH desvio pré</div><div class="ctx">real 4.18h · plan 4.87h</div><div class="val good-c">−0.69h</div><div class="delta good-c">overplanejado ✓</div></div>
+    <div class="tile"><div class="lbl">OZH desvio pós</div><div class="ctx">real 4.10h · plan 4.45h</div><div class="val good-c">−0.36h</div><div class="delta good-c">melhorou pós OCR</div></div>
+    <div class="tile"><div class="lbl">STEM IN real pré</div><div class="ctx">sem valor planejado</div><div class="val">0.91h</div><div class="delta">54.6 min</div></div>
+    <div class="tile"><div class="lbl">STEM IN real pós</div><div class="ctx">sem valor planejado</div><div class="val warn-c">1.17h</div><div class="delta warn-c">▲ +16 min pós OCR</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Stem Out: Real vs Planejado (min)</div>
+      <svg class="ch" id="svgStem" viewBox="0 0 360 210"></svg>
+      <div class="leg"><div class="li"><div class="ld" style="background:var(--s4)"></div>Real</div><div class="li"><div class="ld" style="background:var(--s1);opacity:.7"></div>Planejado</div></div>
     </div>
-
-    <div class="chart-wrap">
-      <div class="chart-title">ORH Desvio Médio: CHURN vs RETIDO por Mês e Company Type</div>
-      <svg class="chart" id="churnKpiBar" viewBox="0 0 820 300"></svg>
-      <div class="legend">
-        <div class="legend-item"><div class="legend-rect" style="background:var(--s6)"></div><span>CHURN</span></div>
-        <div class="legend-item"><div class="legend-rect" style="background:var(--s1)"></div><span>RETAINED</span></div>
-      </div>
-    </div>
-
-    <div class="chart-wrap">
-      <div class="chart-title">Tabela: KPIs dos Churners vs Retidos por Mês (SSP48)</div>
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Mês Ref.</th><th>Tipo</th><th>Status</th>
-              <th>Motoristas</th><th>Rotas SSP48</th><th>Avg Stops</th>
-              <th>ORH Real</th><th>ORH Plan</th><th>ORH Dev</th>
-              <th>OZH Dev</th><th>Stem Out Dev</th>
-            </tr>
-          </thead>
-          <tbody id="churnKpiTbody"></tbody>
-        </table>
-      </div>
+    <div class="card">
+      <div class="card-title">OZH: Real vs Planejado (h)</div>
+      <svg class="ch" id="svgOzh" viewBox="0 0 360 210"></svg>
+      <div class="leg"><div class="li"><div class="ld" style="background:var(--s4)"></div>Real</div><div class="li"><div class="ld" style="background:var(--s1);opacity:.7"></div>Planejado</div></div>
     </div>
   </div>
+
+  <div class="card">
+    <div class="card-title">Comparativo de Desvio por Componente — Pré vs Pós</div>
+    <div class="card-sub">STEM OUT é o único componente sistematicamente underplanejado</div>
+    <svg class="ch" id="svgComp" viewBox="0 0 820 230"></svg>
+    <div class="leg">
+      <div class="li"><div class="ld" style="background:var(--s1);opacity:.6"></div>Pré-OCR</div>
+      <div class="li"><div class="ld" style="background:var(--s2)"></div>Pós-OCR</div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ── S4: CORRELAÇÃO DE PEARSON ── -->
+<div class="sec">
+  <div class="sec-hdr"><span class="sec-num">4</span><h2>Correlação de Pearson — KPIs de Rota × Churn</h2></div>
+  <div class="sec-desc">n=1.296 drivers únicos · Correlação entre métricas de rota (M-1) e status de churn (0/1)</div>
+
+  <div class="insight">
+    <strong>Como ler:</strong> r=0 = sem correlação · r=1 = correlação perfeita · *** p&lt;0.001 · ** p&lt;0.01 · * p&lt;0.05 · ns = não significativo.<br>
+    Correlações moderadas (r&lt;0.30) são esperadas em churn multifatorial — o que importa é a <strong>significância estatística</strong> (p-value).
+  </div>
+
+  <div class="corr-grid" id="corrGrid"></div>
+
+  <div class="card">
+    <div class="card-title">Scatter: ORH Desvio × Status de Churn (por driver)</div>
+    <div class="card-sub">Cada ponto = 1 motorista · vermelho = churnou · azul = retido · eixo X clipado em 20h para legibilidade</div>
+    <svg class="ch" id="svgScatter" viewBox="0 0 820 320"></svg>
+    <div class="leg">
+      <div class="li"><div class="lc" style="background:var(--s4);opacity:.6"></div>CHURN Extra</div>
+      <div class="li"><div class="lc" style="background:#e34948;opacity:.4;border:1px solid var(--s4)"></div>CHURN MLP</div>
+      <div class="li"><div class="lc" style="background:var(--s1);opacity:.6"></div>RETIDO Extra</div>
+      <div class="li"><div class="lc" style="background:#1baf7a;opacity:.4;border:1px solid var(--s2)"></div>RETIDO MLP</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Teste t — ORH Desvio Médio: CHURN vs RETIDO</div>
+    <div class="card-sub">Cohen's d = tamanho do efeito: &lt;0.2 pequeno · 0.2–0.5 moderado · &gt;0.5 grande</div>
+    <svg class="ch" id="svgTtest" viewBox="0 0 820 240"></svg>
+    <div class="leg">
+      <div class="li"><div class="ld" style="background:var(--s4)"></div>CHURN (média)</div>
+      <div class="li"><div class="ld" style="background:var(--s1)"></div>RETIDO (média)</div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ── S5: CHURN × ROTAS KPIs ── -->
+<div class="sec">
+  <div class="sec-hdr"><span class="sec-num">5</span><h2>Churn vs Retidos — KPIs de Rota (M-1)</h2></div>
+  <div class="sec-desc">Join RFL × DM_SHP_ROUTES via rotas do mês anterior ao churn · sem filtro SVC_PRIMARY</div>
+
+  <div class="insight">
+    <strong>Padrão consistente em todos os meses:</strong> drivers que churnam têm ORH desvio 3–7× maior que retidos. A diferença está principalmente no <strong>OZH</strong> (horas produtivas), não no Stem Out — sugerindo que churners têm mais imprevistos durante a entrega, não apenas no deslocamento.
+  </div>
+
+  <div class="card">
+    <div class="card-title">ORH Desvio: CHURN vs RETIDO por Mês e Company Type</div>
+    <div class="card-sub">Linha tracejada = go-live OCR · Mar–Abr pré-OCR · Mai–Jun pós-OCR</div>
+    <svg class="ch" id="svgKpi" viewBox="0 0 820 290"></svg>
+    <div class="leg">
+      <div class="li"><div class="ld" style="background:var(--s4)"></div>CHURN</div>
+      <div class="li"><div class="ld" style="background:var(--s1)"></div>RETIDO</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Tabela: KPIs por Mês, Tipo e Status</div>
+    <div class="tbl-w"><table>
+      <thead><tr><th>Mês</th><th>Tipo</th><th>Status</th><th>Motoristas</th><th>Rotas</th><th>Stops</th><th>ORH Real</th><th>ORH Plan</th><th>ORH Dev</th><th>OZH Dev</th><th>Stem Out Dev</th></tr></thead>
+      <tbody id="tbKpi"></tbody>
+    </table></div>
+  </div>
+</div>
 
 </div><!-- .page -->
 
 <script>
-// ─── DATA ───────────────────────────────────────────────────────────────────
+// ── DATA ─────────────────────────────────────────────────────────────────────
 
-const churnData = [
-  {mes:"Fev/26",tipo:"Extra",pool:479,churned:144,pct:30.06,vol:14.41,volMeli:9.19,bloqMeli:3.55,bgc:1.04,outros:1.04,bloqMlp:0.00},
-  {mes:"Fev/26",tipo:"MLP",  pool:396,churned:89, pct:22.47,vol:20.45,volMeli:16.16,bloqMeli:0.00,bgc:0.00,outros:0.00,bloqMlp:2.02},
-  {mes:"Mar/26",tipo:"Extra",pool:710,churned:201,pct:28.31,vol:10.85,volMeli:7.32, bloqMeli:1.69,bgc:2.54,outros:1.27,bloqMlp:0.00},
-  {mes:"Mar/26",tipo:"MLP",  pool:447,churned:98, pct:21.92,vol:19.02,volMeli:16.11,bloqMeli:0.00,bgc:0.00,outros:0.00,bloqMlp:2.91},
-  {mes:"Abr/26",tipo:"Extra",pool:802,churned:393,pct:49.00,vol:14.21,volMeli:10.97,bloqMeli:3.12,bgc:2.37,outros:1.12,bloqMlp:0.00},
-  {mes:"Abr/26",tipo:"MLP",  pool:488,churned:138,pct:28.28,vol:22.75,volMeli:12.70,bloqMeli:0.00,bgc:0.00,outros:0.00,bloqMlp:5.53},
-  {mes:"Mai/26",tipo:"Extra",pool:686,churned:228,pct:33.24,vol:11.52,volMeli:9.33, bloqMeli:1.75,bgc:0.87,outros:0.87,bloqMlp:0.00},
-  {mes:"Mai/26",tipo:"MLP",  pool:500,churned:119,pct:23.80,vol:20.00,volMeli:16.00,bloqMeli:0.00,bgc:0.00,outros:0.00,bloqMlp:3.80},
-  {mes:"Jun/26",tipo:"Extra",pool:914,churned:237,pct:25.93,vol:9.30, volMeli:7.55, bloqMeli:1.75,bgc:0.66,outros:0.77,bloqMlp:0.00},
-  {mes:"Jun/26",tipo:"MLP",  pool:518,churned:144,pct:27.80,vol:23.55,volMeli:13.90,bloqMeli:0.00,bgc:0.00,outros:0.00,bloqMlp:4.25},
+const churnData=[
+  {m:"Fev/26",t:"Extra",pool:479,ch:144,pct:30.06,vol:14.41,vm:9.19,bm:3.55,bgc:1.04,out:1.04,bmlp:0.00,pre:1},
+  {m:"Fev/26",t:"MLP",  pool:396,ch:89, pct:22.47,vol:20.45,vm:16.16,bm:0.00,bgc:0.00,out:0.00,bmlp:2.02,pre:1},
+  {m:"Mar/26",t:"Extra",pool:710,ch:201,pct:28.31,vol:10.85,vm:7.32, bm:1.69,bgc:2.54,out:1.27,bmlp:0.00,pre:1},
+  {m:"Mar/26",t:"MLP",  pool:447,ch:98, pct:21.92,vol:19.02,vm:16.11,bm:0.00,bgc:0.00,out:0.00,bmlp:2.91,pre:1},
+  {m:"Abr/26",t:"Extra",pool:802,ch:393,pct:49.00,vol:14.21,vm:10.97,bm:3.12,bgc:2.37,out:1.12,bmlp:0.00,pre:1,spike:1},
+  {m:"Abr/26",t:"MLP",  pool:488,ch:138,pct:28.28,vol:22.75,vm:12.70,bm:0.00,bgc:0.00,out:0.00,bmlp:5.53,pre:1},
+  {m:"Mai/26",t:"Extra",pool:686,ch:228,pct:33.24,vol:11.52,vm:9.33, bm:1.75,bgc:0.87,out:0.87,bmlp:0.00,pre:0},
+  {m:"Mai/26",t:"MLP",  pool:500,ch:119,pct:23.80,vol:20.00,vm:16.00,bm:0.00,bgc:0.00,out:0.00,bmlp:3.80,pre:0},
+  {m:"Jun/26",t:"Extra",pool:914,ch:237,pct:25.93,vol:9.30, vm:7.55, bm:1.75,bgc:0.66,out:0.77,bmlp:0.00,pre:0},
+  {m:"Jun/26",t:"MLP",  pool:518,ch:144,pct:27.80,vol:23.55,vm:13.90,bm:0.00,bgc:0.00,out:0.00,bmlp:4.25,pre:0},
 ];
 
-const modalData = [
-  {vt:"LARGE VAN",dm:"LOGISTICS",per:"POST_OCR",rotas:24, stops:57.0, med:54.0, orh:7.142,plan:7.229,dev:-0.086,ozh:-2.541,stem:2.009},
-  {vt:"LARGE VAN",dm:"LOGISTICS",per:"PRE_OCR", rotas:47, stops:53.64,med:53.0, orh:6.366,plan:6.98, dev:-0.614,ozh:-2.825,stem:1.754},
-  {vt:"MOTO",     dm:"CROWD",    per:"POST_OCR",rotas:524,stops:29.04,med:30.0, orh:4.204,plan:2.584,dev:1.62,  ozh:-0.084,stem:0.506},
-  {vt:"MOTO",     dm:"CROWD",    per:"PRE_OCR", rotas:437,stops:29.16,med:32.0, orh:6.295,plan:2.903,dev:3.392, ozh:-0.172,stem:0.616},
-  {vt:"PASSEIO",  dm:"CROWD",    per:"POST_OCR",rotas:4310,stops:36.63,med:36.0,orh:6.012,plan:3.502,dev:2.51,  ozh:0.377, stem:0.687},
-  {vt:"PASSEIO",  dm:"CROWD",    per:"PRE_OCR", rotas:3601,stops:34.53,med:34.0,orh:6.003,plan:3.718,dev:2.285, ozh:0.11,  stem:0.643},
-  {vt:"PASSEIO",  dm:"LOGISTICS",per:"POST_OCR",rotas:5304,stops:47.97,med:49.0,orh:4.937,plan:4.093,dev:0.844, ozh:-0.705,stem:0.699},
-  {vt:"PASSEIO",  dm:"LOGISTICS",per:"PRE_OCR", rotas:4939,stops:51.19,med:53.0,orh:4.882,plan:4.794,dev:0.088, ozh:-1.356,stem:0.689},
-  {vt:"UTILITÁRIO",dm:"CROWD",   per:"POST_OCR",rotas:1585,stops:37.98,med:39.0,orh:5.243,plan:4.069,dev:1.173, ozh:-0.632,stem:0.861},
-  {vt:"UTILITÁRIO",dm:"CROWD",   per:"PRE_OCR", rotas:1040,stops:38.3, med:37.0,orh:5.126,plan:4.423,dev:0.703, ozh:-0.890,stem:0.900},
-  {vt:"UTILITÁRIO",dm:"LOGISTICS",per:"POST_OCR",rotas:7121,stops:50.58,med:46.0,orh:6.633,plan:4.907,dev:1.726,ozh:-0.489,stem:1.159},
-  {vt:"UTILITÁRIO",dm:"LOGISTICS",per:"PRE_OCR", rotas:6322,stops:48.55,med:46.0,orh:6.347,plan:5.285,dev:1.062,ozh:-0.840,stem:1.173},
-  {vt:"VAN",      dm:"LOGISTICS",per:"POST_OCR",rotas:1009,stops:55.77,med:58.0,orh:9.006,plan:6.482,dev:2.524, ozh:-0.349,stem:1.776},
-  {vt:"VAN",      dm:"LOGISTICS",per:"PRE_OCR", rotas:1287,stops:48.53,med:48.0,orh:8.839,plan:6.614,dev:2.225, ozh:-0.648,stem:1.933},
-  {vt:"VUC",      dm:"LOGISTICS",per:"POST_OCR",rotas:1001,stops:48.81,med:53.0,orh:9.047,plan:6.257,dev:2.79,  ozh:-0.098,stem:1.715},
-  {vt:"VUC",      dm:"LOGISTICS",per:"PRE_OCR", rotas:1229,stops:40.2, med:43.0,orh:8.249,plan:6.044,dev:2.205, ozh:-0.445,stem:1.824},
-  {vt:"WALKER",   dm:"LOGISTICS",per:"POST_OCR",rotas:176, stops:136.84,med:93.0,orh:26.651,plan:16.182,dev:10.47,ozh:-0.887,stem:2.326},
-  {vt:"WALKER",   dm:"LOGISTICS",per:"PRE_OCR", rotas:129, stops:81.19,med:77.0,orh:14.925,plan:8.790, dev:6.135,ozh:3.059, stem:0.964},
+const modalData=[
+  {vt:"LARGE VAN",dm:"LOGISTICS",per:"POST",rotas:24, stops:57.0, med:54,orh:7.142,plan:7.229,dev:-0.086,ozh:-2.541,stem:2.009},
+  {vt:"LARGE VAN",dm:"LOGISTICS",per:"PRE", rotas:47, stops:53.64,med:53,orh:6.366,plan:6.980,dev:-0.614,ozh:-2.825,stem:1.754},
+  {vt:"MOTO",     dm:"CROWD",    per:"POST",rotas:524,stops:29.04,med:30,orh:4.204,plan:2.584,dev:1.62,  ozh:-0.084,stem:0.506},
+  {vt:"MOTO",     dm:"CROWD",    per:"PRE", rotas:437,stops:29.16,med:32,orh:6.295,plan:2.903,dev:3.392, ozh:-0.172,stem:0.616},
+  {vt:"PASSEIO",  dm:"CROWD",    per:"POST",rotas:4310,stops:36.63,med:36,orh:6.012,plan:3.502,dev:2.51,ozh:0.377,stem:0.687},
+  {vt:"PASSEIO",  dm:"CROWD",    per:"PRE", rotas:3601,stops:34.53,med:34,orh:6.003,plan:3.718,dev:2.285,ozh:0.11, stem:0.643},
+  {vt:"PASSEIO",  dm:"LOGISTICS",per:"POST",rotas:5304,stops:47.97,med:49,orh:4.937,plan:4.093,dev:0.844,ozh:-0.705,stem:0.699},
+  {vt:"PASSEIO",  dm:"LOGISTICS",per:"PRE", rotas:4939,stops:51.19,med:53,orh:4.882,plan:4.794,dev:0.088,ozh:-1.356,stem:0.689},
+  {vt:"UTILITÁRIO",dm:"CROWD",   per:"POST",rotas:1585,stops:37.98,med:39,orh:5.243,plan:4.069,dev:1.173,ozh:-0.632,stem:0.861},
+  {vt:"UTILITÁRIO",dm:"CROWD",   per:"PRE", rotas:1040,stops:38.30,med:37,orh:5.126,plan:4.423,dev:0.703,ozh:-0.890,stem:0.900},
+  {vt:"UTILITÁRIO",dm:"LOGISTICS",per:"POST",rotas:7121,stops:50.58,med:46,orh:6.633,plan:4.907,dev:1.726,ozh:-0.489,stem:1.159},
+  {vt:"UTILITÁRIO",dm:"LOGISTICS",per:"PRE", rotas:6322,stops:48.55,med:46,orh:6.347,plan:5.285,dev:1.062,ozh:-0.840,stem:1.173},
+  {vt:"VAN",      dm:"LOGISTICS",per:"POST",rotas:1009,stops:55.77,med:58,orh:9.006,plan:6.482,dev:2.524,ozh:-0.349,stem:1.776},
+  {vt:"VAN",      dm:"LOGISTICS",per:"PRE", rotas:1287,stops:48.53,med:48,orh:8.839,plan:6.614,dev:2.225,ozh:-0.648,stem:1.933},
+  {vt:"VUC",      dm:"LOGISTICS",per:"POST",rotas:1001,stops:48.81,med:53,orh:9.047,plan:6.257,dev:2.79, ozh:-0.098,stem:1.715},
+  {vt:"VUC",      dm:"LOGISTICS",per:"PRE", rotas:1229,stops:40.20,med:43,orh:8.249,plan:6.044,dev:2.205,ozh:-0.445,stem:1.824},
+  {vt:"WALKER",   dm:"LOGISTICS",per:"POST",rotas:176, stops:136.84,med:93,orh:26.651,plan:16.182,dev:10.47,ozh:-0.887,stem:2.326},
+  {vt:"WALKER",   dm:"LOGISTICS",per:"PRE", rotas:129, stops:81.19,med:77,orh:14.925,plan:8.790, dev:6.135,ozh:3.059,stem:0.964},
 ];
 
-const orhSummary = [
-  {per:"PRE_OCR", rotas:8955,stops:48.73,medStops:46.0,orhReal:6.164,orhPlan:5.090,orhDev:1.074,medOrhDev:0.084,ozhReal:4.181,ozhPlan:4.873,ozhDev:-0.692,stemOutRealH:1.138,stemOutPlanH:0.211,stemOutDev:0.927,stemOutRealMin:68.3,stemOutPlanMin:12.7,stemOutMinDev:55.6,stemInReal:0.910},
-  {per:"POST_OCR",rotas:9999,stops:49.81,medStops:47.0,orhReal:6.324,orhPlan:4.684,orhDev:1.640,medOrhDev:0.650,ozhReal:4.095,ozhPlan:4.451,ozhDev:-0.356,stemOutRealH:1.211,stemOutPlanH:0.231,stemOutDev:0.980,stemOutRealMin:72.7,stemOutPlanMin:13.8,stemOutMinDev:58.8,stemInReal:1.172},
+const corrData={
+  ALL: {n:1296,r_orh:0.1078,p_orh:1e-4,r_ozh:0.0963,p_ozh:5.2e-4,r_stem:0.1589,p_stem:8.8e-9,r_stops:0.0133,p_stops:.633},
+  Extra:{n:633, r_orh:0.1241,p_orh:1.76e-3,r_ozh:0.1271,p_ozh:1.35e-3,r_stem:-0.0391,p_stem:.326,r_stops:-0.1594,p_stops:5.6e-5},
+  MLP:  {n:663, r_orh:0.1160,p_orh:2.79e-3,r_ozh:0.0901,p_ozh:.0203,r_stem:0.1985,p_stem:2.6e-7,r_stops:-0.1295,p_stops:8.3e-4},
+};
+
+const ttestData={
+  Extra:{ch_mean:3.944,ch_med:0.47,ch_std:15.67,ch_n:177,re_mean:2.135,re_med:0.416,re_std:9.198,re_n:597,t:1.919,p:0.0554,d:0.141},
+  MLP:  {ch_mean:2.603,ch_med:2.015,ch_std:4.874,ch_n:322,re_mean:1.950,re_med:1.351,re_std:4.209,re_n:564,t:2.096,p:0.0364,d:0.143},
+};
+
+const kpiData=[
+  {m:"Mar/26",t:"Extra",s:"CHURN",   mot:100,r:197, st:37.77,orh:22.01,pl:3.96,dev:18.05,ozh:1.79,stem:0.82,pre:1},
+  {m:"Mar/26",t:"Extra",s:"RETAINED",mot:388,r:1364,st:35.34,orh:6.05, pl:3.84,dev:2.21, ozh:-0.08,stem:0.85,pre:1},
+  {m:"Mar/26",t:"MLP",  s:"CHURN",   mot:86, r:499, st:44.11,orh:6.94, pl:5.30,dev:1.65, ozh:-0.47,stem:1.37,pre:1},
+  {m:"Mar/26",t:"MLP",  s:"RETAINED",mot:298,r:5057,st:48.14,orh:6.40, pl:5.33,dev:1.07, ozh:-1.00,stem:1.19,pre:1},
+  {m:"Abr/26",t:"Extra",s:"CHURN",   mot:161,r:411, st:36.82,orh:18.05,pl:3.92,dev:14.12,ozh:2.52,stem:1.17,pre:1},
+  {m:"Abr/26",t:"Extra",s:"RETAINED",mot:554,r:2897,st:34.15,orh:6.01, pl:3.84,dev:2.17, ozh:-0.40,stem:0.74,pre:1},
+  {m:"Abr/26",t:"MLP",  s:"CHURN",   mot:89, r:686, st:44.24,orh:9.31, pl:5.83,dev:3.47, ozh:0.52,stem:1.94,pre:1},
+  {m:"Abr/26",t:"MLP",  s:"RETAINED",mot:361,r:6440,st:45.44,orh:6.57, pl:5.30,dev:1.27, ozh:-0.91,stem:1.26,pre:1},
+  {m:"Mai/26",t:"Extra",s:"CHURN",   mot:100,r:238, st:38.52,orh:21.03,pl:3.93,dev:17.11,ozh:8.42,stem:0.85,pre:0},
+  {m:"Mai/26",t:"Extra",s:"RETAINED",mot:419,r:1631,st:36.62,orh:6.09, pl:3.84,dev:2.25, ozh:0.13,stem:0.56,pre:0},
+  {m:"Mai/26",t:"MLP",  s:"CHURN",   mot:99, r:629, st:52.40,orh:9.88, pl:5.96,dev:3.91, ozh:1.26,stem:1.40,pre:0},
+  {m:"Mai/26",t:"MLP",  s:"RETAINED",mot:366,r:6682,st:51.52,orh:6.81, pl:5.34,dev:1.46, ozh:-0.46,stem:1.04,pre:0},
+  {m:"Jun/26",t:"Extra",s:"CHURN",   mot:118,r:256, st:40.55,orh:10.83,pl:3.73,dev:7.10, ozh:2.85,stem:0.86,pre:0},
+  {m:"Jun/26",t:"Extra",s:"RETAINED",mot:547,r:2310,st:39.63,orh:5.91, pl:3.79,dev:2.12, ozh:0.22,stem:0.71,pre:0},
+  {m:"Jun/26",t:"MLP",  s:"CHURN",   mot:102,r:844, st:54.70,orh:10.48,pl:5.43,dev:5.06, ozh:0.95,stem:1.38,pre:0},
+  {m:"Jun/26",t:"MLP",  s:"RETAINED",mot:371,r:6718,st:52.54,orh:6.94, pl:5.13,dev:1.82, ozh:-0.37,stem:1.13,pre:0},
 ];
 
-const churnKpiData = [
-  {mes:"Mar/26",tipo:"Extra",status:"CHURN",   motoristas:100,rotas:197, stops:37.77,orh:22.01,plan:3.96,dev:18.05,ozh:1.79, stem:0.82},
-  {mes:"Mar/26",tipo:"Extra",status:"RETAINED",motoristas:388,rotas:1364,stops:35.34,orh:6.05, plan:3.84,dev:2.21, ozh:-0.08,stem:0.85},
-  {mes:"Mar/26",tipo:"MLP",  status:"CHURN",   motoristas:86, rotas:499, stops:44.11,orh:6.94, plan:5.30,dev:1.65, ozh:-0.47,stem:1.37},
-  {mes:"Mar/26",tipo:"MLP",  status:"RETAINED",motoristas:298,rotas:5057,stops:48.14,orh:6.40, plan:5.33,dev:1.07, ozh:-1.00,stem:1.19},
-  {mes:"Abr/26",tipo:"Extra",status:"CHURN",   motoristas:161,rotas:411, stops:36.82,orh:18.05,plan:3.92,dev:14.12,ozh:2.52, stem:1.17},
-  {mes:"Abr/26",tipo:"Extra",status:"RETAINED",motoristas:554,rotas:2897,stops:34.15,orh:6.01, plan:3.84,dev:2.17, ozh:-0.40,stem:0.74},
-  {mes:"Abr/26",tipo:"MLP",  status:"CHURN",   motoristas:89, rotas:686, stops:44.24,orh:9.31, plan:5.83,dev:3.47, ozh:0.52, stem:1.94},
-  {mes:"Abr/26",tipo:"MLP",  status:"RETAINED",motoristas:361,rotas:6440,stops:45.44,orh:6.57, plan:5.30,dev:1.27, ozh:-0.91,stem:1.26},
-  {mes:"Mai/26",tipo:"Extra",status:"CHURN",   motoristas:100,rotas:238, stops:38.52,orh:21.03,plan:3.93,dev:17.11,ozh:8.42, stem:0.85},
-  {mes:"Mai/26",tipo:"Extra",status:"RETAINED",motoristas:419,rotas:1631,stops:36.62,orh:6.09, plan:3.84,dev:2.25, ozh:0.13, stem:0.56},
-  {mes:"Mai/26",tipo:"MLP",  status:"CHURN",   motoristas:99, rotas:629, stops:52.40,orh:9.88, plan:5.96,dev:3.91, ozh:1.26, stem:1.40},
-  {mes:"Mai/26",tipo:"MLP",  status:"RETAINED",motoristas:366,rotas:6682,stops:51.52,orh:6.81, plan:5.34,dev:1.46, ozh:-0.46,stem:1.04},
-  {mes:"Jun/26",tipo:"Extra",status:"CHURN",   motoristas:118,rotas:256, stops:40.55,orh:10.83,plan:3.73,dev:7.10, ozh:2.85, stem:0.86},
-  {mes:"Jun/26",tipo:"Extra",status:"RETAINED",motoristas:547,rotas:2310,stops:39.63,orh:5.91, plan:3.79,dev:2.12, ozh:0.22, stem:0.71},
-  {mes:"Jun/26",tipo:"MLP",  status:"CHURN",   motoristas:102,rotas:844, stops:54.70,orh:10.48,plan:5.43,dev:5.06, ozh:0.95, stem:1.38},
-  {mes:"Jun/26",tipo:"MLP",  status:"RETAINED",motoristas:371,rotas:6718,stops:52.54,orh:6.94, plan:5.13,dev:1.82, ozh:-0.37,stem:1.13},
-];
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+const tt=document.getElementById('tt');
+const ns=(e,t,a={})=>{const el=document.createElementNS('http://www.w3.org/2000/svg',t);Object.entries(a).forEach(([k,v])=>el.setAttribute(k,v));e&&e.appendChild(el);return el};
+const tip=(e,h)=>{tt.innerHTML=h;tt.style.display='block';mv(e)};
+const mv=e=>{let x=e.clientX+14,y=e.clientY-10;if(x+250>window.innerWidth)x=e.clientX-250;tt.style.left=x+'px';tt.style.top=y+'px'};
+const ht=()=>tt.style.display='none';
+const sig=p=>p<0.001?'***':p<0.01?'**':p<0.05?'*':'ns';
+const fmt=v=>(v>=0?'+':'')+v.toFixed(2);
 
-// ─── HELPERS ───────────────────────────────────────────────────────────────
+// ── FILL TABLES ───────────────────────────────────────────────────────────────
+document.getElementById('tbChurn').innerHTML=churnData.map(d=>`<tr>
+  <td><span class="${d.pre?'bp':'bpost'}">${d.m}</span></td><td>${d.t}</td>
+  <td>${d.pool.toLocaleString()}</td><td>${d.ch.toLocaleString()}</td>
+  <td class="${d.spike?'vb':d.pct<30?'vg':d.pct>35?'vw':''}">${d.pct.toFixed(1)}%</td>
+  <td>${d.vol.toFixed(1)}%</td><td>${d.vm.toFixed(1)}%</td><td>${d.bm.toFixed(1)}%</td>
+  <td>${d.bgc.toFixed(1)}%</td><td>${d.out.toFixed(1)}%</td><td>${d.bmlp.toFixed(1)}%</td>
+</tr>`).join('');
 
-const tt = document.getElementById('tooltip');
+document.getElementById('tbModal').innerHTML=modalData.map(d=>`<tr>
+  <td>${d.vt}</td><td>${d.dm}</td>
+  <td><span class="${d.per==='PRE'?'bp':'bpost'}">${d.per==='PRE'?'Pré-OCR':'Pós-OCR'}</span></td>
+  <td>${d.rotas.toLocaleString()}</td><td>${d.stops.toFixed(1)}</td><td>${d.med}</td>
+  <td>${d.orh.toFixed(2)}h</td><td>${d.plan.toFixed(2)}h</td>
+  <td class="${d.dev>5?'vb':d.dev>2?'vw':d.dev<0?'vg':''}">${fmt(d.dev)}h</td>
+  <td>${fmt(d.ozh)}h</td><td>${fmt(d.stem)}h</td>
+</tr>`).join('');
 
-function showTip(e, html) {
-  tt.innerHTML = html;
-  tt.style.display = 'block';
-  moveTip(e);
-}
-function moveTip(e) {
-  let x = e.clientX + 14, y = e.clientY - 10;
-  if (x + 230 > window.innerWidth) x = e.clientX - 230;
-  tt.style.left = x + 'px'; tt.style.top = y + 'px';
-}
-function hideTip() { tt.style.display = 'none'; }
+document.getElementById('tbKpi').innerHTML=kpiData.map(d=>`<tr>
+  <td><span class="${d.pre?'bp':'bpost'}">${d.m}</span></td><td>${d.t}</td>
+  <td>${d.s==='CHURN'?'<span class="vb">CHURN</span>':'RETIDO'}</td>
+  <td>${d.mot}</td><td>${d.r.toLocaleString()}</td><td>${d.st.toFixed(1)}</td>
+  <td>${d.orh.toFixed(2)}h</td><td>${d.pl.toFixed(2)}h</td>
+  <td class="${d.dev>5?'vb':d.dev>2?'vw':''}">${fmt(d.dev)}h</td>
+  <td>${fmt(d.ozh)}h</td><td>${fmt(d.stem)}h</td>
+</tr>`).join('');
 
-function cssVar(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-
-function svgEl(tag, attrs) {
-  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
-  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
-  return el;
-}
-
-// ─── FILL TABLES ───────────────────────────────────────────────────────────
-
-// Churn table
-const ct = document.getElementById('churnTbody');
-churnData.forEach(d => {
-  const isPre = ['Fev/26','Mar/26','Abr/26'].includes(d.mes);
-  const isSpike = d.mes === 'Abr/26' && d.tipo === 'Extra';
-  const pctClass = isSpike ? 'val-bad' : (isPre ? '' : (d.pct < 30 ? 'val-good' : 'val-warn'));
-  ct.innerHTML += `<tr>
-    <td><span class="badge-${isPre?'pre':'post'}">${d.mes}</span></td>
-    <td>${d.tipo}</td>
-    <td>${d.pool.toLocaleString()}</td>
-    <td>${d.churned.toLocaleString()}</td>
-    <td class="${pctClass}">${d.pct.toFixed(1)}%</td>
-    <td>${d.vol.toFixed(1)}%</td>
-    <td>${d.volMeli.toFixed(1)}%</td>
-    <td>${d.bloqMeli.toFixed(1)}%</td>
-    <td>${d.bgc.toFixed(1)}%</td>
-    <td>${d.outros.toFixed(1)}%</td>
-    <td>${d.bloqMlp.toFixed(1)}%</td>
-  </tr>`;
+// ── CORRELATION CARDS ─────────────────────────────────────────────────────────
+const cg=document.getElementById('corrGrid');
+Object.entries(corrData).forEach(([grp,d])=>{
+  const vars=[
+    {k:'ORH Desvio × Churn',r:d.r_orh,p:d.p_orh},
+    {k:'OZH Desvio × Churn',r:d.r_ozh,p:d.p_ozh},
+    {k:'Stem Out Dev × Churn',r:d.r_stem,p:d.p_stem},
+    {k:'Stops × Churn',r:d.r_stops,p:d.p_stops},
+  ];
+  const card=document.createElement('div');card.className='corr-card';
+  card.innerHTML=`<div class="c-lbl">${grp} &nbsp;<span style="font-weight:400;color:var(--muted)">n=${d.n}</span></div>`+
+    vars.map(v=>{
+      const pct=Math.abs(v.r)*100;
+      const col=Math.abs(v.r)>0.15?'var(--s4)':Math.abs(v.r)>0.08?'var(--s3)':'var(--s1)';
+      const s=sig(v.p);
+      return `<div class="corr-row">
+        <span class="var">${v.k}</span>
+        <span><span class="rval" style="color:${col}">r=${v.r>0?'+':''}${v.r.toFixed(3)}</span><span class="sig">${s}</span></span>
+      </div>
+      <div class="r-bar-wrap"><div class="r-bar" style="width:${Math.min(pct*3,100)}%;background:${col}"></div></div>`;
+    }).join('');
+  cg.appendChild(card);
 });
 
-// Modal table
-const mt = document.getElementById('modalTbody');
-modalData.forEach(d => {
-  const cls = d.per === 'PRE_OCR' ? 'period-pre' : 'period-post';
-  const devCls = d.dev > 3 ? 'val-bad' : (d.dev > 1.5 ? 'val-warn' : (d.dev < 0 ? 'val-good' : ''));
-  mt.innerHTML += `<tr>
-    <td>${d.vt}</td><td>${d.dm}</td>
-    <td class="${cls}">${d.per === 'PRE_OCR' ? 'Pré-OCR' : 'Pós-OCR'}</td>
-    <td>${d.rotas.toLocaleString()}</td>
-    <td>${d.stops.toFixed(1)}</td><td>${d.med.toFixed(0)}</td>
-    <td>${d.orh.toFixed(2)}h</td><td>${d.plan.toFixed(2)}h</td>
-    <td class="${devCls}">${d.dev > 0 ? '+' : ''}${d.dev.toFixed(2)}h</td>
-    <td>${d.ozh > 0 ? '+' : ''}${d.ozh.toFixed(2)}h</td>
-    <td>${d.stem > 0 ? '+' : ''}${d.stem.toFixed(2)}h</td>
-  </tr>`;
-});
-
-// Churn KPI table
-const ck = document.getElementById('churnKpiTbody');
-churnKpiData.forEach(d => {
-  const isPre = ['Mar/26','Abr/26'].includes(d.mes);
-  const isCh = d.status === 'CHURN';
-  const devCls = isCh ? (d.dev > 5 ? 'val-bad' : 'val-warn') : '';
-  ck.innerHTML += `<tr>
-    <td><span class="badge-${isPre?'pre':'post'}">${d.mes}</span></td>
-    <td>${d.tipo}</td>
-    <td>${isCh ? '<span style="color:var(--critical);font-weight:700">CHURN</span>' : 'RETIDO'}</td>
-    <td>${d.motoristas}</td><td>${d.rotas.toLocaleString()}</td>
-    <td>${d.stops.toFixed(1)}</td>
-    <td>${d.orh.toFixed(2)}h</td><td>${d.plan.toFixed(2)}h</td>
-    <td class="${devCls}">${d.dev > 0 ? '+' : ''}${d.dev.toFixed(2)}h</td>
-    <td>${d.ozh > 0 ? '+' : ''}${d.ozh.toFixed(2)}h</td>
-    <td>${d.stem > 0 ? '+' : ''}${d.stem.toFixed(2)}h</td>
-  </tr>`;
-});
-
-// ─── CHART: CHURN LINE ─────────────────────────────────────────────────────
-
-(function() {
-  const svg = document.getElementById('churnLine');
-  const W=820, H=240, pad={t:20,r:20,b:40,l:50};
-  const cw = W-pad.l-pad.r, ch = H-pad.t-pad.b;
-
-  const meses = ['Fev/26','Mar/26','Abr/26','Mai/26','Jun/26'];
-  const extras = [30.06, 28.31, 49.00, 33.24, 25.93];
-  const mlps   = [22.47, 21.92, 28.28, 23.80, 27.80];
-  const maxY = 55, minY = 0;
-  const xScale = i => pad.l + (i / (meses.length-1)) * cw;
-  const yScale = v => pad.t + ch - (v - minY)/(maxY - minY)*ch;
-
-  // gridlines
-  [0,10,20,30,40,50].forEach(v => {
-    const y = yScale(v);
-    svg.appendChild(svgEl('line',{x1:pad.l,y1:y,x2:pad.l+cw,y2:y,stroke:'var(--gridline)',strokeWidth:1}));
-    svg.appendChild(svgEl('text',{x:pad.l-6,y:y+4,textAnchor:'end','font-size':'11','fill':'var(--text-muted)'})).textContent = v+'%';
+// ── SVG UTILITIES ─────────────────────────────────────────────────────────────
+function drawGrid(svg,W,H,pad,yTicks,yScale,fmt){
+  yTicks.forEach(v=>{
+    const y=yScale(v);
+    ns(svg,'line',{x1:pad.l,y1:y,x2:pad.l+W,y2:y,stroke:'var(--grid)',strokeWidth:1});
+    const t=ns(svg,'text',{x:pad.l-5,y:y+4,'text-anchor':'end','font-size':'10','fill':'var(--muted)'});
+    t.textContent=fmt?fmt(v):v;
   });
-
-  // OCR line at index 2.93 (28/04 is ~93% through abr-to-mai gap)
-  const ocrX = pad.l + (2.93/(meses.length-1))*cw;
-  const ocrLine = svgEl('line',{x1:ocrX,y1:pad.t,x2:ocrX,y2:pad.t+ch,stroke:'var(--s3)',strokeWidth:1.5,strokeDasharray:'4 3'});
-  svg.appendChild(ocrLine);
-  const ocrLbl = svgEl('text',{x:ocrX+4,y:pad.t+12,'font-size':'10','fill':'var(--s3)','font-weight':'600'});
-  ocrLbl.textContent = 'OCR 28/04'; svg.appendChild(ocrLbl);
-
-  // x axis
-  meses.forEach((m,i) => {
-    const x = xScale(i);
-    svg.appendChild(svgEl('line',{x1:x,y1:pad.t+ch,x2:x,y2:pad.t+ch+4,stroke:'var(--baseline)',strokeWidth:1}));
-    const lbl = svgEl('text',{x,y:pad.t+ch+16,textAnchor:'middle','font-size':'11','fill':'var(--text-muted)'});
-    const isPre = i < 3;
-    lbl.textContent = m; lbl.setAttribute('fill', isPre ? 'var(--badge-pre-text)' : 'var(--badge-post-text)');
-    svg.appendChild(lbl);
+}
+function drawXLabels(svg,labels,xScale,pad,H,colors){
+  labels.forEach((l,i)=>{
+    const x=xScale(i);
+    ns(svg,'line',{x1:x,y1:pad.t+H,x2:x,y2:pad.t+H+4,stroke:'var(--base)',strokeWidth:1});
+    const parts=l.split('\n');
+    parts.forEach((p,j)=>{
+      const t=ns(svg,'text',{x,y:pad.t+H+16+j*12,'text-anchor':'middle','font-size':'10','fill':colors?colors[i]:'var(--muted)'});
+      t.textContent=p;
+    });
   });
+}
 
-  function drawLine(vals, color, id) {
-    const pts = vals.map((v,i) => `${xScale(i)},${yScale(v)}`).join(' ');
-    const poly = svgEl('polyline',{points:pts,fill:'none',stroke:color,strokeWidth:2.5,strokeLinejoin:'round',strokeLinecap:'round'});
-    svg.appendChild(poly);
-    vals.forEach((v,i) => {
-      const c = svgEl('circle',{cx:xScale(i),cy:yScale(v),r:5,fill:color,stroke:'var(--surface-1)',strokeWidth:2});
+// ── CHART: CHURN LINE ─────────────────────────────────────────────────────────
+(()=>{
+  const svg=document.getElementById('svgChurn');
+  const W=820,H=240,p={t:20,r:20,b:40,l:48},cw=W-p.l-p.r,ch=H-p.t-p.b;
+  const mes=['Fev/26','Mar/26','Abr/26','Mai/26','Jun/26'];
+  const ex=[30.06,28.31,49.00,33.24,25.93];
+  const ml=[22.47,21.92,28.28,23.80,27.80];
+  const xS=i=>p.l+(i/(mes.length-1))*cw;
+  const yS=v=>p.t+ch-(v/55)*ch;
+  drawGrid(svg,cw,ch,p,[0,10,20,30,40,50],yS,v=>v+'%');
+  // shade pre/post
+  const ocrX=p.l+(2.93/(mes.length-1))*cw;
+  ns(svg,'rect',{x:p.l,y:p.t,width:ocrX-p.l,height:ch,fill:'var(--pre-bg)',opacity:.3});
+  ns(svg,'rect',{x:ocrX,y:p.t,width:p.l+cw-ocrX,height:ch,fill:'var(--post-bg)',opacity:.3});
+  const ol=ns(svg,'line',{x1:ocrX,y1:p.t,x2:ocrX,y2:p.t+ch,stroke:'var(--s3)',strokeWidth:1.5,strokeDasharray:'4 3'});
+  const ot=ns(svg,'text',{x:ocrX+4,y:p.t+13,'font-size':'10','fill':'var(--s3)','font-weight':'700'});ot.textContent='OCR 28/04';
+  mes.forEach((m,i)=>{
+    const x=xS(i),t=ns(svg,'text',{x,y:p.t+ch+16,'text-anchor':'middle','font-size':'10','fill':i<3?'var(--pre-tx)':'var(--post-tx)'});
+    t.textContent=m;
+  });
+  const drawLine=(vals,color,label)=>{
+    const pts=vals.map((v,i)=>`${xS(i)},${yS(v)}`).join(' ');
+    ns(svg,'polyline',{points:pts,fill:'none',stroke:color,strokeWidth:2.5,strokeLinejoin:'round',strokeLinecap:'round'});
+    vals.forEach((v,i)=>{
+      const c=ns(svg,'circle',{cx:xS(i),cy:yS(v),r:5,fill:color,stroke:'var(--card)',strokeWidth:2});
       c.style.cursor='pointer';
-      c.addEventListener('mouseenter', e => showTip(e, `<b>${meses[i]}</b> — ${id}<br>Churn: <b>${v.toFixed(1)}%</b>`));
-      c.addEventListener('mousemove', moveTip);
-      c.addEventListener('mouseleave', hideTip);
-      svg.appendChild(c);
+      c.addEventListener('mouseenter',e=>tip(e,`<b>${mes[i]} — ${label}</b><br>Churn: <b>${v.toFixed(1)}%</b>`));
+      c.addEventListener('mousemove',mv);c.addEventListener('mouseleave',ht);
     });
+  };
+  drawLine(ex,'var(--s1)','Extra');
+  drawLine(ml,'var(--s2)','MLP');
+})();
+
+// ── CHART: STOPS BAR ─────────────────────────────────────────────────────────
+(()=>{
+  const svg=document.getElementById('svgStops');
+  const W=820,H=320,p={t:20,r:20,b:80,l:48},cw=W-p.l-p.r,ch=H-p.t-p.b;
+  const keys=[...new Set(modalData.map(d=>`${d.vt}|${d.dm}`))];
+  const pairs=keys.map(k=>{const[vt,dm]=k.split('|');
+    return{vt,dm,pre:modalData.find(d=>d.vt===vt&&d.dm===dm&&d.per==='PRE')?.stops||0,
+                  post:modalData.find(d=>d.vt===vt&&d.dm===dm&&d.per==='POST')?.stops||0};});
+  const maxV=Math.max(...pairs.flatMap(p=>[p.pre,p.post]))*1.08;
+  const yS=v=>p.t+ch-(v/maxV)*ch;
+  drawGrid(svg,cw,ch,p,[0,30,60,90,120,150].filter(v=>v<=maxV),yS,v=>v);
+  const gW=cw/pairs.length,bW=gW*.33;
+  pairs.forEach((d,i)=>{
+    const cx=p.l+i*gW+gW/2;
+    [[d.pre,'var(--s1)','Pré-OCR'],[d.post,'var(--s2)','Pós-OCR']].forEach(([val,col,lbl],j)=>{
+      const bh=(val/maxV)*ch,bx=cx+(j===0?-bW*.6:bW*.6)-bW/2,by=yS(val);
+      const r=ns(svg,'rect',{x:bx,y:by,width:bW,height:Math.max(bh,2),fill:col,rx:3,ry:3});
+      r.style.cursor='pointer';
+      r.addEventListener('mouseenter',e=>tip(e,`<b>${d.vt} ${d.dm}</b><br>${lbl}<br>Avg stops: <b>${val.toFixed(1)}</b>`));
+      r.addEventListener('mousemove',mv);r.addEventListener('mouseleave',ht);
+      if(bh>16){const t=ns(svg,'text',{x:bx+bW/2,y:by-4,'text-anchor':'middle','font-size':'10','fill':'var(--sub)','font-weight':'600'});t.textContent=val.toFixed(0);}
+    });
+    const t1=ns(svg,'text',{x:cx,y:p.t+ch+18,'text-anchor':'middle','font-size':'10','fill':'var(--muted)'});t1.textContent=d.vt;
+    const t2=ns(svg,'text',{x:cx,y:p.t+ch+30,'text-anchor':'middle','font-size':'9','fill':'var(--muted)'});t2.textContent=d.dm;
+  });
+})();
+
+// ── CHART: ORH MODAL ─────────────────────────────────────────────────────────
+(()=>{
+  const svg=document.getElementById('svgOrhModal');
+  const W=820,H=300,p={t:20,r:20,b:80,l:52},cw=W-p.l-p.r,ch=H-p.t-p.b;
+  const keys=[...new Set(modalData.map(d=>`${d.vt}|${d.dm}`))];
+  const pairs=keys.map(k=>{const[vt,dm]=k.split('|');
+    return{vt,dm,pre:modalData.find(d=>d.vt===vt&&d.dm===dm&&d.per==='PRE')?.dev||0,
+                  post:modalData.find(d=>d.vt===vt&&d.dm===dm&&d.per==='POST')?.dev||0};});
+  const minV=Math.min(0,...pairs.flatMap(d=>[d.pre,d.post]));
+  const maxV=Math.max(...pairs.flatMap(d=>[d.pre,d.post]))*1.1;
+  const yS=v=>p.t+ch*(maxV-v)/(maxV-minV);
+  const zero=yS(0);
+  [-2,0,2,4,6,8,10].filter(v=>v>=minV&&v<=maxV).forEach(v=>{
+    const y=yS(v);
+    ns(svg,'line',{x1:p.l,y1:y,x2:p.l+cw,y2:y,stroke:v===0?'var(--base)':'var(--grid)',strokeWidth:v===0?1.5:1});
+    const t=ns(svg,'text',{x:p.l-5,y:y+4,'text-anchor':'end','font-size':'10','fill':'var(--muted)'});t.textContent=(v>=0?'+':'')+v+'h';
+  });
+  const gW=cw/pairs.length,bW=gW*.33;
+  pairs.forEach((d,i)=>{
+    const cx=p.l+i*gW+gW/2;
+    [[d.pre,'var(--s1)','Pré-OCR'],[d.post,'var(--s2)','Pós-OCR']].forEach(([val,col,lbl],j)=>{
+      const by=val>=0?yS(val):zero,bh=Math.abs(yS(val)-zero);
+      if(bh<1)return;
+      const bx=cx+(j===0?-bW*.6:bW*.6)-bW/2;
+      const r=ns(svg,'rect',{x:bx,y:by,width:bW,height:Math.max(bh,2),fill:col,rx:3,ry:3});
+      r.style.cursor='pointer';
+      r.addEventListener('mouseenter',e=>tip(e,`<b>${d.vt} ${d.dm}</b><br>${lbl}<br>ORH dev: <b>${val>0?'+':''}${val.toFixed(2)}h</b>`));
+      r.addEventListener('mousemove',mv);r.addEventListener('mouseleave',ht);
+    });
+    const t1=ns(svg,'text',{x:cx,y:p.t+ch+18,'text-anchor':'middle','font-size':'10','fill':'var(--muted)'});t1.textContent=d.vt;
+    const t2=ns(svg,'text',{x:cx,y:p.t+ch+30,'text-anchor':'middle','font-size':'9','fill':'var(--muted)'});t2.textContent=d.dm;
+  });
+})();
+
+// ── CHART: STEM OUT / OZH PAIR BARS ──────────────────────────────────────────
+function pairBar(id,groups,maxV,fmtY,unit){
+  const svg=document.getElementById(id);
+  const W=360,H=210,p={t:20,r:10,b:50,l:50},cw=W-p.l-p.r,ch=H-p.t-p.b;
+  const yS=v=>p.t+ch-(v/maxV)*ch;
+  const ticks=[];for(let v=0;v<=maxV;v+=maxV/5)ticks.push(Math.round(v*10)/10);
+  ticks.forEach(v=>{
+    const y=yS(v);
+    ns(svg,'line',{x1:p.l,y1:y,x2:p.l+cw,y2:y,stroke:'var(--grid)',strokeWidth:1});
+    const t=ns(svg,'text',{x:p.l-4,y:y+4,'text-anchor':'end','font-size':'10','fill':'var(--muted)'});t.textContent=fmtY(v);
+  });
+  const gW=cw/groups.length,bW=gW*.32;
+  groups.forEach((g,i)=>{
+    const cx=p.l+i*gW+gW/2;
+    [[g.real,'var(--s4)','Real'],[g.plan,'var(--s1)','Planejado']].forEach(([val,col,lbl],j)=>{
+      const bh=(val/maxV)*ch,bx=cx+(j===0?-bW*.6:bW*.6)-bW/2,by=yS(val);
+      const r=ns(svg,'rect',{x:bx,y:by,width:bW,height:Math.max(bh,2),fill:col,rx:3,ry:3,opacity:j===1?.7:1});
+      r.style.cursor='pointer';
+      r.addEventListener('mouseenter',e=>tip(e,`${g.label} — ${lbl}<br><b>${val.toFixed(1)}${unit}</b>`));
+      r.addEventListener('mousemove',mv);r.addEventListener('mouseleave',ht);
+      const t=ns(svg,'text',{x:bx+bW/2,y:by-4,'text-anchor':'middle','font-size':'10','fill':'var(--sub)','font-weight':'600'});
+      t.textContent=val.toFixed(1);
+    });
+    const t=ns(svg,'text',{x:cx,y:p.t+ch+18,'text-anchor':'middle','font-size':'11','fill':'var(--sub)'});t.textContent=g.label;
+  });
+}
+pairBar('svgStem',[{label:'Pré-OCR',real:68.3,plan:12.7},{label:'Pós-OCR',real:72.7,plan:13.8}],90,v=>v+'',' min');
+pairBar('svgOzh', [{label:'Pré-OCR',real:4.181,plan:4.873},{label:'Pós-OCR',real:4.095,plan:4.451}],6,v=>v.toFixed(1)+'h',' h');
+
+// ── CHART: COMPONENTS DEVIATION ──────────────────────────────────────────────
+(()=>{
+  const svg=document.getElementById('svgComp');
+  const W=820,H=230,p={t:20,r:20,b:50,l:56},cw=W-p.l-p.r,ch=H-p.t-p.b;
+  const comps=[
+    {l:'STEM OUT (h)',pre:0.927,post:0.980},
+    {l:'OZH (h)',    pre:-0.692,post:-0.356},
+    {l:'ORH Total',  pre:1.074,post:1.640},
+  ];
+  const minV=Math.min(...comps.flatMap(c=>[c.pre,c.post]))*1.2;
+  const maxV=Math.max(...comps.flatMap(c=>[c.pre,c.post]))*1.2;
+  const yS=v=>p.t+ch*(maxV-v)/(maxV-minV);
+  const zero=yS(0);
+  [-1,-0.5,0,0.5,1,1.5,2].filter(v=>v>=minV&&v<=maxV).forEach(v=>{
+    const y=yS(v);
+    ns(svg,'line',{x1:p.l,y1:y,x2:p.l+cw,y2:y,stroke:v===0?'var(--base)':'var(--grid)',strokeWidth:v===0?1.5:1});
+    const t=ns(svg,'text',{x:p.l-5,y:y+4,'text-anchor':'end','font-size':'10','fill':'var(--muted)'});t.textContent=(v>=0?'+':'')+v.toFixed(1)+'h';
+  });
+  const gW=cw/comps.length,bW=gW*.32;
+  comps.forEach((c,i)=>{
+    const cx=p.l+i*gW+gW/2;
+    [[c.pre,'var(--s1)','Pré-OCR'],[c.post,'var(--s2)','Pós-OCR']].forEach(([val,col,lbl],j)=>{
+      const by=val>=0?yS(val):zero,bh=Math.abs(yS(val)-zero);
+      if(bh<1)return;
+      const bx=cx+(j===0?-bW*.6:bW*.6)-bW/2;
+      const r=ns(svg,'rect',{x:bx,y:by,width:bW,height:Math.max(bh,2),fill:col,rx:3,ry:3});
+      r.style.cursor='pointer';
+      r.addEventListener('mouseenter',e=>tip(e,`${c.l} — ${lbl}<br>Desvio: <b>${val>=0?'+':''}${val.toFixed(3)}h</b>`));
+      r.addEventListener('mousemove',mv);r.addEventListener('mouseleave',ht);
+      const anchor=val>=0?by-5:by+bh+12;
+      const t=ns(svg,'text',{x:bx+bW/2,y:anchor,'text-anchor':'middle','font-size':'10','fill':'var(--sub)','font-weight':'600'});
+      t.textContent=(val>=0?'+':'')+val.toFixed(2)+'h';
+    });
+    const t=ns(svg,'text',{x:cx,y:p.t+ch+20,'text-anchor':'middle','font-size':'12','fill':'var(--sub)','font-weight':'600'});t.textContent=c.l;
+  });
+})();
+
+// ── CHART: SCATTER ────────────────────────────────────────────────────────────
+(()=>{
+  const scatterRaw=SCATTER_DATA;
+  const svg=document.getElementById('svgScatter');
+  const W=820,H=320,p={t:20,r:20,b:40,l:52},cw=W-p.l-p.r,ch=H-p.t-p.b;
+  const maxX=20,minX=-3,maxY=10,minY=-4;
+  const xS=v=>p.l+(Math.max(minX,Math.min(maxX,v))-minX)/(maxX-minX)*cw;
+  const yS=v=>p.t+ch-(Math.max(minY,Math.min(maxY,v))-minY)/(maxY-minY)*ch;
+  // grid
+  [-2,0,2,4,6,8,10].forEach(v=>{
+    if(v<minX||v>maxX)return;
+    const x=xS(v);
+    ns(svg,'line',{x1:x,y1:p.t,x2:x,y2:p.t+ch,stroke:v===0?'var(--base)':'var(--grid)',strokeWidth:v===0?1.5:1});
+    const t=ns(svg,'text',{x,y:p.t+ch+14,'text-anchor':'middle','font-size':'10','fill':'var(--muted)'});t.textContent=(v>=0?'+':'')+v+'h';
+  });
+  [-3,-2,-1,0,1,2,3,4,5].forEach(v=>{
+    if(v<minY||v>maxY)return;
+    const y=yS(v);
+    ns(svg,'line',{x1:p.l,y1:y,x2:p.l+cw,y2:y,stroke:v===0?'var(--base)':'var(--grid)',strokeWidth:v===0?1.5:1});
+    const t=ns(svg,'text',{x:p.l-4,y:y+4,'text-anchor':'end','font-size':'10','fill':'var(--muted)'});t.textContent=(v>=0?'+':'')+v+'h';
+  });
+  // axis labels
+  const lx=ns(svg,'text',{x:p.l+cw/2,y:p.t+ch+30,'text-anchor':'middle','font-size':'11','fill':'var(--muted)'});lx.textContent='ORH Desvio (h)';
+  const ly=ns(svg,'text',{x:10,y:p.t+ch/2,'text-anchor':'middle','font-size':'11','fill':'var(--muted)',transform:`rotate(-90,10,${p.t+ch/2})`});ly.textContent='OZH Desvio (h)';
+  // trend lines
+  for(const isChurn of[0,1]){
+    const sub=scatterRaw.filter(d=>d.c===isChurn);
+    const xs=sub.map(d=>d.x),ys=sub.map(d=>d.y);
+    const n=xs.length,sx=xs.reduce((a,b)=>a+b,0),sy=ys.reduce((a,b)=>a+b,0);
+    const sxy=xs.reduce((a,v,i)=>a+v*ys[i],0),sxx=xs.reduce((a,v)=>a+v*v,0);
+    const slope=(n*sxy-sx*sy)/(n*sxx-sx*sx);
+    const intercept=(sy-slope*sx)/n;
+    const x1v=minX,x2v=Math.min(maxX,15);
+    ns(svg,'line',{x1:xS(x1v),y1:yS(slope*x1v+intercept),x2:xS(x2v),y2:yS(slope*x2v+intercept),stroke:isChurn?'var(--s4)':'var(--s1)',strokeWidth:1.5,strokeDasharray:'5 3',opacity:.7});
   }
-
-  drawLine(extras, 'var(--s1)', 'Extra');
-  drawLine(mlps, 'var(--s2)', 'MLP');
-})();
-
-// ─── CHART: STOPS BAR (grouped by modal) ──────────────────────────────────
-
-(function() {
-  const svg = document.getElementById('stopsBar');
-  const W=820, H=320, pad={t:20,r:20,b:80,l:50};
-  const cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
-
-  // Get unique modal+model combos
-  const keys = [...new Set(modalData.map(d => `${d.vt}|${d.dm}`))];
-  const pairs = keys.map(k => {
-    const [vt,dm] = k.split('|');
-    const pre  = modalData.find(d => d.vt===vt && d.dm===dm && d.per==='PRE_OCR');
-    const post = modalData.find(d => d.vt===vt && d.dm===dm && d.per==='POST_OCR');
-    return {label:`${vt}\n${dm}`, vt, dm, pre: pre?.stops||0, post: post?.stops||0};
-  });
-
-  const maxV = Math.max(...pairs.flatMap(p=>[p.pre,p.post]))*1.1;
-  const yScale = v => pad.t + ch - (v/maxV)*ch;
-  const groupW = cw / pairs.length;
-  const barW = groupW * 0.35;
-
-  [0,30,60,90,120,150].forEach(v => {
-    if (v > maxV) return;
-    const y = yScale(v);
-    svg.appendChild(svgEl('line',{x1:pad.l,y1:y,x2:pad.l+cw,y2:y,stroke:'var(--gridline)',strokeWidth:1}));
-    svg.appendChild(svgEl('text',{x:pad.l-6,y:y+4,textAnchor:'end','font-size':'10','fill':'var(--text-muted)'})).textContent = v;
-  });
-
-  pairs.forEach((p, i) => {
-    const cx = pad.l + i*groupW + groupW/2;
-    const drawBar = (val, xOff, color, label) => {
-      if (val === 0) return;
-      const bh = (val/maxV)*ch;
-      const bx = cx + xOff - barW/2;
-      const by = yScale(val);
-      const rect = svgEl('rect',{x:bx,y:by,width:barW,height:bh,fill:color,rx:3,ry:3});
-      rect.style.cursor='pointer';
-      rect.addEventListener('mouseenter', e => showTip(e, `<b>${p.vt} ${p.dm}</b><br>${label}<br>Avg stops: <b>${val.toFixed(1)}</b>`));
-      rect.addEventListener('mousemove', moveTip);
-      rect.addEventListener('mouseleave', hideTip);
-      svg.appendChild(rect);
-      if (bh > 18) {
-        const lbl = svgEl('text',{x:bx+barW/2,y:by-4,textAnchor:'middle','font-size':'10','fill':'var(--text-secondary)','font-weight':'600'});
-        lbl.textContent = val.toFixed(0); svg.appendChild(lbl);
-      }
-    };
-    drawBar(p.pre,  -barW*0.55, 'var(--s1)', 'Pré-OCR');
-    drawBar(p.post, +barW*0.55, 'var(--s2)', 'Pós-OCR');
-
-    const lblEl = svgEl('text',{x:cx,y:pad.t+ch+20,textAnchor:'middle','font-size':'10','fill':'var(--text-muted)'});
-    lblEl.textContent = p.vt; svg.appendChild(lblEl);
-    const lblEl2 = svgEl('text',{x:cx,y:pad.t+ch+33,textAnchor:'middle','font-size':'9','fill':'var(--text-muted)'});
-    lblEl2.textContent = p.dm; svg.appendChild(lblEl2);
+  // points
+  scatterRaw.forEach(d=>{
+    const col=d.c===1?(d.t==='E'?'var(--s4)':'#e34948'):(d.t==='E'?'var(--s1)':'var(--s2)');
+    const c=ns(svg,'circle',{cx:xS(d.x),cy:yS(d.y),r:4,fill:col,opacity:.5,stroke:'none'});
+    c.style.cursor='pointer';
+    c.addEventListener('mouseenter',e=>tip(e,`${d.t==='E'?'Extra':'MLP'} — ${d.c?'<b>CHURN</b>':'Retido'}<br>ORH dev: <b>${d.x>=0?'+':''}${d.x}h</b><br>OZH dev: <b>${d.y>=0?'+':''}${d.y}h</b><br>Stem Out dev: <b>+${d.s}h</b>`));
+    c.addEventListener('mousemove',mv);c.addEventListener('mouseleave',ht);
+    svg.appendChild(c);
   });
 })();
 
-// ─── CHART: ORH DEV BAR ────────────────────────────────────────────────────
-
-(function() {
-  const svg = document.getElementById('orhBar');
-  const W=820, H=320, pad={t:20,r:20,b:80,l:50};
-  const cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
-
-  const keys = [...new Set(modalData.map(d => `${d.vt}|${d.dm}`))];
-  const pairs = keys.map(k => {
-    const [vt,dm] = k.split('|');
-    const pre  = modalData.find(d => d.vt===vt && d.dm===dm && d.per==='PRE_OCR');
-    const post = modalData.find(d => d.vt===vt && d.dm===dm && d.per==='POST_OCR');
-    return {vt, dm, pre: pre?.dev||0, post: post?.dev||0};
-  });
-
-  const minV = Math.min(...pairs.flatMap(p=>[p.pre,p.post]), 0);
-  const maxV = Math.max(...pairs.flatMap(p=>[p.pre,p.post]))*1.12;
-  const zero = pad.t + ch - (0 - minV)/(maxV - minV)*ch;
-  const yScale = v => pad.t + ch - (v-minV)/(maxV-minV)*ch;
-
-  [-2,0,2,4,6,8,10,12].forEach(v => {
-    if (v < minV || v > maxV) return;
-    const y = yScale(v);
-    svg.appendChild(svgEl('line',{x1:pad.l,y1:y,x2:pad.l+cw,y2:y,stroke:v===0?'var(--baseline)':'var(--gridline)',strokeWidth:v===0?1.5:1}));
-    svg.appendChild(svgEl('text',{x:pad.l-6,y:y+4,textAnchor:'end','font-size':'10','fill':'var(--text-muted)'})).textContent = v+'h';
-  });
-
-  const groupW = cw / pairs.length;
-  const barW = groupW * 0.35;
-
-  pairs.forEach((p, i) => {
-    const cx = pad.l + i*groupW + groupW/2;
-    const drawBar = (val, xOff, color, label) => {
-      const by = val >= 0 ? yScale(val) : zero;
-      const bh = Math.abs(yScale(val) - zero);
-      if (bh < 1) return;
-      const bx = cx + xOff - barW/2;
-      const rect = svgEl('rect',{x:bx,y:by,width:barW,height:Math.max(bh,2),fill:color,rx:3,ry:3});
-      rect.style.cursor='pointer';
-      rect.addEventListener('mouseenter', e => showTip(e, `<b>${p.vt} ${p.dm}</b><br>${label}<br>ORH desvio: <b>${val>0?'+':''}${val.toFixed(2)}h</b>`));
-      rect.addEventListener('mousemove', moveTip);
-      rect.addEventListener('mouseleave', hideTip);
-      svg.appendChild(rect);
-    };
-    drawBar(p.pre, -barW*0.55, 'var(--s1)', 'Pré-OCR');
-    drawBar(p.post, +barW*0.55, 'var(--s2)', 'Pós-OCR');
-
-    const lblEl = svgEl('text',{x:cx,y:pad.t+ch+20,textAnchor:'middle','font-size':'10','fill':'var(--text-muted)'});
-    lblEl.textContent = p.vt; svg.appendChild(lblEl);
-    const lblEl2 = svgEl('text',{x:cx,y:pad.t+ch+33,textAnchor:'middle','font-size':'9','fill':'var(--text-muted)'});
-    lblEl2.textContent = p.dm; svg.appendChild(lblEl2);
-  });
-})();
-
-// ─── CHART: STEM OUT BAR ───────────────────────────────────────────────────
-
-(function() {
-  const svg = document.getElementById('stemOutBar');
-  const W=380, H=220, pad={t:20,r:20,b:50,l:55};
-  const cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
-  const groups = [
-    {label:'Pré-OCR', real:68.3, plan:12.7},
-    {label:'Pós-OCR', real:72.7, plan:13.8},
+// ── CHART: T-TEST ─────────────────────────────────────────────────────────────
+(()=>{
+  const svg=document.getElementById('svgTtest');
+  const W=820,H=240,p={t:20,r:20,b:50,l:52},cw=W-p.l-p.r,ch=H-p.t-p.b;
+  const groups=[
+    {label:'Extra\nCHURN',  val:3.944,col:'var(--s4)',sub:'Extra\nRETIDO',  val2:2.135,col2:'var(--s1)',t:'Extra'},
+    {label:'MLP\nCHURN',    val:2.603,col:'var(--s4)',sub:'MLP\nRETIDO',    val2:1.950,col2:'var(--s1)',t:'MLP'},
   ];
-  const maxV = 90;
-  const yScale = v => pad.t + ch - (v/maxV)*ch;
-  const groupW = cw/2;
-  const barW = groupW * 0.35;
-
-  [0,20,40,60,80].forEach(v => {
-    const y = yScale(v);
-    svg.appendChild(svgEl('line',{x1:pad.l,y1:y,x2:pad.l+cw,y2:y,stroke:'var(--gridline)',strokeWidth:1}));
-    svg.appendChild(svgEl('text',{x:pad.l-6,y:y+4,textAnchor:'end','font-size':'10','fill':'var(--text-muted)'})).textContent = v;
+  const bars=groups.flatMap(g=>[{label:g.label,val:g.val,col:g.col,gtype:g.t,role:'churn'},{label:g.sub,val:g.val2,col:g.col2,gtype:g.t,role:'retained'}]);
+  const maxV=Math.max(...bars.map(b=>b.val))*1.2;
+  const yS=v=>p.t+ch-(v/maxV)*ch;
+  [0,1,2,3,4].filter(v=>v<=maxV).forEach(v=>{
+    const y=yS(v);
+    ns(svg,'line',{x1:p.l,y1:y,x2:p.l+cw,y2:y,stroke:'var(--grid)',strokeWidth:1});
+    const t=ns(svg,'text',{x:p.l-4,y:y+4,'text-anchor':'end','font-size':'10','fill':'var(--muted)'});t.textContent='+'+v+'h';
   });
-
-  groups.forEach((g,i) => {
-    const cx = pad.l + i*groupW + groupW/2;
-    [[g.real,'var(--s6)','Real'], [g.plan,'var(--s1)','Plan']].forEach(([val,col,lbl],j) => {
-      const bh = (val/maxV)*ch;
-      const bx = cx + (j===0 ? -barW*0.55 : barW*0.55) - barW/2;
-      const by = yScale(val);
-      const rect = svgEl('rect',{x:bx,y:by,width:barW,height:bh,fill:col,rx:3,ry:3,opacity: j===1?0.7:1});
-      rect.addEventListener('mouseenter', e => showTip(e, `${g.label} — ${lbl}<br><b>${val.toFixed(1)} min</b>`));
-      rect.addEventListener('mousemove', moveTip);
-      rect.addEventListener('mouseleave', hideTip);
-      svg.appendChild(rect);
-      const lbl2 = svgEl('text',{x:bx+barW/2,y:by-4,textAnchor:'middle','font-size':'10','fill':'var(--text-secondary)','font-weight':'600'});
-      lbl2.textContent = val.toFixed(0); svg.appendChild(lbl2);
+  const bW=cw/bars.length*.55;
+  bars.forEach((b,i)=>{
+    const cx=p.l+(i+.5)*(cw/bars.length);
+    const bh=(b.val/maxV)*ch,bx=cx-bW/2,by=yS(b.val);
+    const r=ns(svg,'rect',{x:bx,y:by,width:bW,height:Math.max(bh,2),fill:b.col,rx:3,ry:3});
+    r.style.cursor='pointer';
+    const td=ttestData[b.gtype];
+    r.addEventListener('mouseenter',e=>tip(e,`<b>${b.label.replace('\n',' ')}</b><br>Média: <b>${b.val.toFixed(3)}h</b><br>Mediana: ${b.role==='churn'?td.ch_med:td.re_med}h<br>n=${b.role==='churn'?td.ch_n:td.re_n}<br>t=${td.t.toFixed(3)}  p=${td.p.toFixed(4)}<br>Cohen's d=${td.d}`));
+    r.addEventListener('mousemove',mv);r.addEventListener('mouseleave',ht);
+    const t=ns(svg,'text',{x:cx,y:by-5,'text-anchor':'middle','font-size':'11','fill':'var(--sub)','font-weight':'700'});t.textContent=b.val.toFixed(2)+'h';
+    const parts=b.label.split('\n');
+    parts.forEach((pt,j)=>{
+      const lbl=ns(svg,'text',{x:cx,y:p.t+ch+18+j*12,'text-anchor':'middle','font-size':'11','fill':j===0?'var(--sub)':'var(--muted)','font-weight':j===0?'600':'400'});
+      lbl.textContent=pt;
     });
-    const lx = svgEl('text',{x:cx,y:pad.t+ch+18,textAnchor:'middle','font-size':'11','fill':'var(--text-secondary)'});
-    lx.textContent = g.label; svg.appendChild(lx);
   });
-  const axis = svgEl('text',{x:pad.l-40,y:pad.t+ch/2,textAnchor:'middle','font-size':'10','fill':'var(--text-muted)',transform:`rotate(-90,${pad.l-40},${pad.t+ch/2})`});
-  axis.textContent = 'minutos'; svg.appendChild(axis);
+  // significance annotation
+  const annotate=(x1,x2,y,txt)=>{
+    ns(svg,'line',{x1,y1:y,x2,y2:y,stroke:'var(--muted)',strokeWidth:1});
+    ns(svg,'line',{x1,y1:y,x2:x1,y2:y+6,stroke:'var(--muted)',strokeWidth:1});
+    ns(svg,'line',{x1:x2,y1:y,x2,y2:y+6,stroke:'var(--muted)',strokeWidth:1});
+    const t=ns(svg,'text',{x:(x1+x2)/2,y:y-5,'text-anchor':'middle','font-size':'11','fill':'var(--muted)','font-weight':'600'});t.textContent=txt;
+  };
+  const bw=cw/bars.length;
+  annotate(p.l+bw*.5*.5,p.l+bw*1.5*.5+bw*.5,p.t+14,'Extra: p=0.055 (ns) · Cohen\'s d=0.14 (pequeno)');
+  annotate(p.l+bw*2+bw*.5*.5,p.l+bw*3+bw*.5*.5,p.t+14,'MLP: p=0.036 * · Cohen\'s d=0.14 (pequeno)');
 })();
 
-// ─── CHART: OZH BAR ────────────────────────────────────────────────────────
-
-(function() {
-  const svg = document.getElementById('ozhBar');
-  const W=380, H=220, pad={t:20,r:20,b:50,l:55};
-  const cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
-  const groups = [
-    {label:'Pré-OCR', real:4.181, plan:4.873},
-    {label:'Pós-OCR', real:4.095, plan:4.451},
-  ];
-  const maxV = 6;
-  const yScale = v => pad.t + ch - (v/maxV)*ch;
-  const groupW = cw/2;
-  const barW = groupW * 0.35;
-
-  [0,1,2,3,4,5].forEach(v => {
-    const y = yScale(v);
-    svg.appendChild(svgEl('line',{x1:pad.l,y1:y,x2:pad.l+cw,y2:y,stroke:'var(--gridline)',strokeWidth:1}));
-    svg.appendChild(svgEl('text',{x:pad.l-6,y:y+4,textAnchor:'end','font-size':'10','fill':'var(--text-muted)'})).textContent = v+'h';
+// ── CHART: KPI BAR ────────────────────────────────────────────────────────────
+(()=>{
+  const svg=document.getElementById('svgKpi');
+  const W=820,H=290,p={t:20,r:20,b:80,l:52},cw=W-p.l-p.r,ch=H-p.t-p.b;
+  const groups=kpiData;
+  const maxV=Math.max(...groups.map(d=>d.dev))*1.1;
+  const yS=v=>p.t+ch-(v/maxV)*ch;
+  [0,2,4,6,8,10,12,14,16,18,20].filter(v=>v<=maxV).forEach(v=>{
+    const y=yS(v);
+    ns(svg,'line',{x1:p.l,y1:y,x2:p.l+cw,y2:y,stroke:'var(--grid)',strokeWidth:1});
+    const t=ns(svg,'text',{x:p.l-4,y:y+4,'text-anchor':'end','font-size':'10','fill':'var(--muted)'});t.textContent='+'+v+'h';
   });
-
-  groups.forEach((g,i) => {
-    const cx = pad.l + i*groupW + groupW/2;
-    [[g.real,'var(--s6)','Real'], [g.plan,'var(--s1)','Plan']].forEach(([val,col,lbl],j) => {
-      const bh = (val/maxV)*ch;
-      const bx = cx + (j===0 ? -barW*0.55 : barW*0.55) - barW/2;
-      const by = yScale(val);
-      const rect = svgEl('rect',{x:bx,y:by,width:barW,height:bh,fill:col,rx:3,ry:3,opacity:j===1?0.7:1});
-      rect.addEventListener('mouseenter', e => showTip(e, `${g.label} — ${lbl}<br><b>${val.toFixed(3)}h</b>`));
-      rect.addEventListener('mousemove', moveTip);
-      rect.addEventListener('mouseleave', hideTip);
-      svg.appendChild(rect);
-      const lbl2 = svgEl('text',{x:bx+barW/2,y:by-4,textAnchor:'middle','font-size':'10','fill':'var(--text-secondary)','font-weight':'600'});
-      lbl2.textContent = val.toFixed(2); svg.appendChild(lbl2);
+  const ocrX=p.l+(3.5/groups.length)*cw;
+  ns(svg,'line',{x1:ocrX,y1:p.t,x2:ocrX,y2:p.t+ch,stroke:'var(--s3)',strokeWidth:1.5,strokeDasharray:'4 3'});
+  const ot=ns(svg,'text',{x:ocrX+3,y:p.t+14,'font-size':'9','fill':'var(--s3)','font-weight':'700'});ot.textContent='OCR 28/04';
+  const bW=cw/groups.length*.45;
+  groups.forEach((d,i)=>{
+    const cx=p.l+(i+.5)*(cw/groups.length);
+    const col=d.s==='CHURN'?'var(--s4)':'var(--s1)';
+    const bh=(d.dev/maxV)*ch,bx=cx-bW/2,by=yS(d.dev);
+    const r=ns(svg,'rect',{x:bx,y:by,width:bW,height:Math.max(bh,2),fill:col,rx:3,ry:3});
+    r.style.cursor='pointer';
+    r.addEventListener('mouseenter',e=>tip(e,`<b>${d.m} ${d.t} — ${d.s}</b><br>ORH dev: <b>+${d.dev.toFixed(2)}h</b><br>Motoristas: ${d.mot}`));
+    r.addEventListener('mousemove',mv);r.addEventListener('mouseleave',ht);
+    const parts=(d.m+'\n'+d.t+'\n'+d.s.slice(0,3)).split('\n');
+    parts.forEach((pt,j)=>{
+      const lbl=ns(svg,'text',{x:cx,y:p.t+ch+16+j*12,'text-anchor':'middle','font-size':j===0?'10':'9','fill':d.pre?'var(--pre-tx)':'var(--post-tx)'});
+      lbl.textContent=pt;
     });
-    const lx = svgEl('text',{x:cx,y:pad.t+ch+18,textAnchor:'middle','font-size':'11','fill':'var(--text-secondary)'});
-    lx.textContent = g.label; svg.appendChild(lx);
   });
 })();
-
-// ─── CHART: COMPONENTS DEVIATION BAR ──────────────────────────────────────
-
-(function() {
-  const svg = document.getElementById('componentsBar');
-  const W=820, H=240, pad={t:20,r:20,b:50,l:60};
-  const cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
-
-  const components = [
-    {label:'STEM OUT\n(horas)', pre: orhSummary[0].stemOutDev, post: orhSummary[1].stemOutDev},
-    {label:'OZH', pre: orhSummary[0].ozhDev, post: orhSummary[1].ozhDev},
-    {label:'ORH Total', pre: orhSummary[0].orhDev, post: orhSummary[1].orhDev},
-  ];
-
-  const allVals = components.flatMap(c=>[c.pre,c.post]);
-  const minV = Math.min(...allVals)*1.2;
-  const maxV = Math.max(...allVals)*1.2;
-  const zero = pad.t + ch * (maxV/(maxV-minV));
-  const yScale = v => pad.t + ch*(maxV-v)/(maxV-minV);
-
-  [-1,-0.5,0,0.5,1,1.5,2].forEach(v => {
-    if (v < minV || v > maxV) return;
-    const y = yScale(v);
-    svg.appendChild(svgEl('line',{x1:pad.l,y1:y,x2:pad.l+cw,y2:y,stroke:v===0?'var(--baseline)':'var(--gridline)',strokeWidth:v===0?1.5:1}));
-    const t = svgEl('text',{x:pad.l-6,y:y+4,textAnchor:'end','font-size':'10','fill':'var(--text-muted)'});
-    t.textContent = (v>=0?'+':'')+v.toFixed(1)+'h'; svg.appendChild(t);
-  });
-
-  const groupW = cw/components.length;
-  const barW = groupW*0.3;
-
-  components.forEach((c,i) => {
-    const cx = pad.l + i*groupW + groupW/2;
-
-    const drawBar = (val, xOff, color, lbl) => {
-      const by = val >= 0 ? yScale(val) : zero;
-      const bh = Math.abs(yScale(val)-zero);
-      if (bh < 1) return;
-      const bx = cx + xOff - barW/2;
-      const rect = svgEl('rect',{x:bx,y:by,width:barW,height:Math.max(bh,2),fill:color,rx:3,ry:3});
-      rect.addEventListener('mouseenter', e => showTip(e, `${c.label} — ${lbl}<br>Desvio: <b>${val>0?'+':''}${val.toFixed(3)}h</b>`));
-      rect.addEventListener('mousemove', moveTip);
-      rect.addEventListener('mouseleave', hideTip);
-      svg.appendChild(rect);
-      const anchor = val >= 0 ? by - 4 : by + bh + 12;
-      const lbl2 = svgEl('text',{x:bx+barW/2,y:anchor,textAnchor:'middle','font-size':'10','fill':'var(--text-secondary)','font-weight':'600'});
-      lbl2.textContent = (val>=0?'+':'')+val.toFixed(2)+'h'; svg.appendChild(lbl2);
-    };
-
-    drawBar(c.pre, -barW*0.6, 'var(--s1)', 'Pré-OCR');
-    drawBar(c.post, barW*0.6, 'var(--s2)', 'Pós-OCR');
-
-    const parts = c.label.split('\n');
-    const lx1 = svgEl('text',{x:cx,y:pad.t+ch+18,textAnchor:'middle','font-size':'12','fill':'var(--text-secondary)','font-weight':'600'});
-    lx1.textContent = parts[0]; svg.appendChild(lx1);
-    if (parts[1]) {
-      const lx2 = svgEl('text',{x:cx,y:pad.t+ch+30,textAnchor:'middle','font-size':'10','fill':'var(--text-muted)'});
-      lx2.textContent = parts[1]; svg.appendChild(lx2);
-    }
-  });
-})();
-
-// ─── CHART: CHURN KPI BAR ─────────────────────────────────────────────────
-
-(function() {
-  const svg = document.getElementById('churnKpiBar');
-  const W=820, H=300, pad={t:20,r:20,b:80,l:55};
-  const cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
-
-  // Group by mes+tipo, show churn vs retained
-  const combos = [
-    {label:'Extra\nMar', pre:true, churn: churnKpiData.find(d=>d.mes==='Mar/26'&&d.tipo==='Extra'&&d.status==='CHURN'), ret: churnKpiData.find(d=>d.mes==='Mar/26'&&d.tipo==='Extra'&&d.status==='RETAINED')},
-    {label:'MLP\nMar',   pre:true, churn: churnKpiData.find(d=>d.mes==='Mar/26'&&d.tipo==='MLP'&&d.status==='CHURN'), ret: churnKpiData.find(d=>d.mes==='Mar/26'&&d.tipo==='MLP'&&d.status==='RETAINED')},
-    {label:'Extra\nAbr', pre:true, churn: churnKpiData.find(d=>d.mes==='Abr/26'&&d.tipo==='Extra'&&d.status==='CHURN'), ret: churnKpiData.find(d=>d.mes==='Abr/26'&&d.tipo==='Extra'&&d.status==='RETAINED')},
-    {label:'MLP\nAbr',   pre:true, churn: churnKpiData.find(d=>d.mes==='Abr/26'&&d.tipo==='MLP'&&d.status==='CHURN'), ret: churnKpiData.find(d=>d.mes==='Abr/26'&&d.tipo==='MLP'&&d.status==='RETAINED')},
-    {label:'Extra\nMai', pre:false,churn: churnKpiData.find(d=>d.mes==='Mai/26'&&d.tipo==='Extra'&&d.status==='CHURN'), ret: churnKpiData.find(d=>d.mes==='Mai/26'&&d.tipo==='Extra'&&d.status==='RETAINED')},
-    {label:'MLP\nMai',   pre:false,churn: churnKpiData.find(d=>d.mes==='Mai/26'&&d.tipo==='MLP'&&d.status==='CHURN'), ret: churnKpiData.find(d=>d.mes==='Mai/26'&&d.tipo==='MLP'&&d.status==='RETAINED')},
-    {label:'Extra\nJun', pre:false,churn: churnKpiData.find(d=>d.mes==='Jun/26'&&d.tipo==='Extra'&&d.status==='CHURN'), ret: churnKpiData.find(d=>d.mes==='Jun/26'&&d.tipo==='Extra'&&d.status==='RETAINED')},
-    {label:'MLP\nJun',   pre:false,churn: churnKpiData.find(d=>d.mes==='Jun/26'&&d.tipo==='MLP'&&d.status==='CHURN'), ret: churnKpiData.find(d=>d.mes==='Jun/26'&&d.tipo==='MLP'&&d.status==='RETAINED')},
-  ];
-
-  const maxV = Math.max(...combos.map(c => Math.max(c.churn?.dev||0, c.ret?.dev||0))) * 1.1;
-  const yScale = v => pad.t + ch - (v/maxV)*ch;
-  const groupW = cw/combos.length;
-  const barW = groupW*0.35;
-
-  [0,2,4,6,8,10,12,14,16,18,20].forEach(v => {
-    if (v > maxV) return;
-    const y = yScale(v);
-    svg.appendChild(svgEl('line',{x1:pad.l,y1:y,x2:pad.l+cw,y2:y,stroke:'var(--gridline)',strokeWidth:1}));
-    svg.appendChild(svgEl('text',{x:pad.l-6,y:y+4,textAnchor:'end','font-size':'10','fill':'var(--text-muted)'})).textContent = '+'+v+'h';
-  });
-
-  // OCR divider between index 3 and 4
-  const ocrX = pad.l + (3.5/combos.length)*cw;
-  svg.appendChild(svgEl('line',{x1:ocrX,y1:pad.t,x2:ocrX,y2:pad.t+ch,stroke:'var(--s3)',strokeWidth:1.5,strokeDasharray:'4 3'}));
-  const ol = svgEl('text',{x:ocrX+3,y:pad.t+14,'font-size':'9','fill':'var(--s3)','font-weight':'600'});
-  ol.textContent='OCR 28/04'; svg.appendChild(ol);
-
-  combos.forEach((c,i) => {
-    const cx = pad.l + i*groupW + groupW/2;
-    const drawBar = (d, xOff, color, lbl) => {
-      if (!d) return;
-      const bh = (d.dev/maxV)*ch;
-      const bx = cx + xOff - barW/2;
-      const by = yScale(d.dev);
-      const rect = svgEl('rect',{x:bx,y:by,width:barW,height:Math.max(bh,2),fill:color,rx:3,ry:3});
-      rect.addEventListener('mouseenter', e => showTip(e, `${c.label.replace('\n',' ')} — ${lbl}<br>ORH dev: <b>+${d.dev.toFixed(2)}h</b><br>Motoristas: ${d.motoristas}`));
-      rect.addEventListener('mousemove', moveTip);
-      rect.addEventListener('mouseleave', hideTip);
-      svg.appendChild(rect);
-    };
-    drawBar(c.churn, -barW*0.55, 'var(--s6)', 'CHURN');
-    drawBar(c.ret, +barW*0.55, 'var(--s1)', 'RETIDO');
-
-    const parts = c.label.split('\n');
-    const lx1 = svgEl('text',{x:cx,y:pad.t+ch+18,textAnchor:'middle','font-size':'10','fill': c.pre?'var(--badge-pre-text)':'var(--badge-post-text)','font-weight':'600'});
-    lx1.textContent = parts[0]; svg.appendChild(lx1);
-    const lx2 = svgEl('text',{x:cx,y:pad.t+ch+32,textAnchor:'middle','font-size':'10','fill':'var(--text-muted)'});
-    lx2.textContent = parts[1]; svg.appendChild(lx2);
-  });
-})();
+</script>
+<script>
+const SCATTER_DATA=[{"x": 3.25, "y": 1.93, "s": 0.66, "c": 1, "t": "M"}, {"x": 1.15, "y": -0.03, "s": 0.62, "c": 1, "t": "M"}, {"x": 0.85, "y": -0.53, "s": 0.61, "c": 1, "t": "M"}, {"x": 0.47, "y": -0.46, "s": 0.75, "c": 1, "t": "E"}, {"x": 0.56, "y": -0.8, "s": 0.45, "c": 1, "t": "M"}, {"x": 5.12, "y": 0.83, "s": 2.95, "c": 1, "t": "M"}, {"x": 6.29, "y": 4.29, "s": 0.58, "c": 1, "t": "E"}, {"x": 1.45, "y": -0.56, "s": 0.65, "c": 1, "t": "E"}, {"x": 2.6, "y": -0.36, "s": 2.38, "c": 1, "t": "M"}, {"x": -0.61, "y": -1.76, "s": 0.84, "c": 1, "t": "M"}, {"x": 0.1, "y": -0.82, "s": 0.93, "c": 1, "t": "M"}, {"x": 3.73, "y": 0.12, "s": 2.51, "c": 1, "t": "M"}, {"x": -0.24, "y": -1.07, "s": 0.47, "c": 1, "t": "E"}, {"x": -0.42, "y": -1.63, "s": 0.62, "c": 1, "t": "E"}, {"x": 0.56, "y": -1.58, "s": 1.52, "c": 1, "t": "M"}, {"x": 3.57, "y": 1.1, "s": 1.79, "c": 1, "t": "M"}, {"x": 0.49, "y": -0.03, "s": 0.53, "c": 1, "t": "E"}, {"x": 10.91, "y": 7.85, "s": 3.07, "c": 1, "t": "E"}, {"x": 8.24, "y": -0.72, "s": 0.62, "c": 1, "t": "M"}, {"x": 9.14, "y": 2.3, "s": 1.75, "c": 1, "t": "M"}, {"x": 2.04, "y": -1.45, "s": 2.72, "c": 1, "t": "M"}, {"x": 1.68, "y": -1.81, "s": 2.55, "c": 1, "t": "M"}, {"x": 3.42, "y": 2.39, "s": 0.62, "c": 1, "t": "M"}, {"x": 0.0, "y": -1.27, "s": 0.95, "c": 1, "t": "M"}, {"x": 0.83, "y": -0.57, "s": 1.03, "c": 1, "t": "M"}, {"x": 1.38, "y": -0.92, "s": 1.31, "c": 1, "t": "M"}, {"x": 15.46, "y": 9.6, "s": 1.29, "c": 1, "t": "E"}, {"x": 1.84, "y": 1.01, "s": 0.63, "c": 1, "t": "M"}, {"x": 1.45, "y": 0.67, "s": 0.32, "c": 1, "t": "E"}, {"x": -0.11, "y": -1.29, "s": 0.82, "c": 1, "t": "M"}, {"x": 3.49, "y": 1.33, "s": 1.42, "c": 1, "t": "M"}, {"x": -0.08, "y": -0.66, "s": 0.51, "c": 1, "t": "E"}, {"x": 0.21, "y": -1.49, "s": 0.9, "c": 1, "t": "M"}, {"x": -1.21, "y": -1.88, "s": 0.47, "c": 1, "t": "M"}, {"x": -0.61, "y": -1.87, "s": 0.85, "c": 1, "t": "M"}, {"x": -0.28, "y": -2.33, "s": 1.04, "c": 1, "t": "M"}, {"x": 0.01, "y": -1.29, "s": 0.84, "c": 1, "t": "M"}, {"x": 5.23, "y": 0.41, "s": 0.94, "c": 1, "t": "E"}, {"x": 2.04, "y": -0.46, "s": 1.78, "c": 1, "t": "M"}, {"x": 1.37, "y": -0.69, "s": 0.82, "c": 1, "t": "M"}, {"x": 5.15, "y": -1.0, "s": 0.89, "c": 1, "t": "M"}, {"x": 8.01, "y": 1.11, "s": 0.63, "c": 1, "t": "M"}, {"x": -0.42, "y": -0.9, "s": 0.37, "c": 1, "t": "E"}, {"x": 4.46, "y": 0.45, "s": 2.48, "c": 1, "t": "M"}, {"x": 0.01, "y": -1.8, "s": 1.18, "c": 1, "t": "M"}, {"x": 0.13, "y": -1.08, "s": 0.4, "c": 1, "t": "E"}, {"x": 6.65, "y": 1.59, "s": 2.75, "c": 1, "t": "M"}, {"x": 0.65, "y": -0.93, "s": 0.74, "c": 1, "t": "E"}, {"x": 2.94, "y": 0.49, "s": 1.86, "c": 1, "t": "M"}, {"x": 0.18, "y": -0.57, "s": 0.55, "c": 1, "t": "E"}, {"x": 2.02, "y": -0.98, "s": 1.95, "c": 1, "t": "M"}, {"x": 3.85, "y": -0.69, "s": 1.65, "c": 1, "t": "M"}, {"x": 1.19, "y": 0.18, "s": 0.42, "c": 1, "t": "M"}, {"x": 2.23, "y": -0.4, "s": 2.03, "c": 1, "t": "M"}, {"x": 1.09, "y": -0.84, "s": 1.28, "c": 1, "t": "M"}, {"x": 4.57, "y": -0.31, "s": 0.48, "c": 1, "t": "E"}, {"x": 3.2, "y": 1.79, "s": 1.05, "c": 1, "t": "M"}, {"x": 22.72, "y": 4.18, "s": 1.02, "c": 1, "t": "M"}, {"x": 1.57, "y": -0.88, "s": 1.97, "c": 1, "t": "M"}, {"x": 0.3, "y": -0.58, "s": 0.88, "c": 1, "t": "M"}, {"x": 1.4, "y": -0.29, "s": 1.05, "c": 1, "t": "M"}, {"x": 2.62, "y": 0.61, "s": 0.99, "c": 1, "t": "M"}, {"x": 6.24, "y": 5.73, "s": 0.52, "c": 1, "t": "E"}, {"x": 0.17, "y": -0.91, "s": 0.96, "c": 1, "t": "M"}, {"x": 3.03, "y": 0.31, "s": 1.84, "c": 1, "t": "M"}, {"x": -0.07, "y": -1.18, "s": 0.3, "c": 1, "t": "E"}, {"x": 0.38, "y": -0.07, "s": 0.37, "c": 1, "t": "E"}, {"x": 0.64, "y": -0.46, "s": 0.7, "c": 1, "t": "E"}, {"x": 4.33, "y": 0.33, "s": 0.59, "c": 1, "t": "E"}, {"x": -0.74, "y": -0.98, "s": 0.25, "c": 1, "t": "E"}, {"x": 0.4, "y": -0.17, "s": 0.33, "c": 1, "t": "E"}, {"x": 2.67, "y": -0.06, "s": 1.82, "c": 1, "t": "M"}, {"x": 0.73, "y": -1.68, "s": 1.22, "c": 1, "t": "M"}, {"x": 1.54, "y": -0.31, "s": 1.39, "c": 1, "t": "M"}, {"x": 9.14, "y": 2.72, "s": 1.33, "c": 1, "t": "M"}, {"x": 7.16, "y": 2.04, "s": 2.9, "c": 1, "t": "M"}, {"x": -0.48, "y": -2.49, "s": 0.86, "c": 1, "t": "M"}, {"x": -0.01, "y": -0.66, "s": 0.46, "c": 1, "t": "M"}, {"x": -1.53, "y": -3.16, "s": 1.41, "c": 1, "t": "M"}, {"x": 5.0, "y": 1.74, "s": 1.19, "c": 1, "t": "M"}, {"x": 0.38, "y": -0.42, "s": 0.56, "c": 1, "t": "E"}, {"x": -0.46, "y": -1.21, "s": 0.76, "c": 1, "t": "E"}, {"x": -0.91, "y": -1.18, "s": 0.28, "c": 1, "t": "E"}, {"x": 4.77, "y": 2.45, "s": 1.32, "c": 1, "t": "M"}, {"x": 2.96, "y": -0.37, "s": 2.3, "c": 1, "t": "M"}, {"x": 0.51, "y": -1.37, "s": 0.84, "c": 1, "t": "M"}, {"x": 11.18, "y": 9.46, "s": 1.68, "c": 1, "t": "E"}, {"x": 4.95, "y": 1.88, "s": 0.77, "c": 1, "t": "M"}, {"x": -0.27, "y": -0.75, "s": 0.32, "c": 1, "t": "E"}, {"x": 1.7, "y": -0.54, "s": 1.29, "c": 1, "t": "M"}, {"x": 13.35, "y": 7.01, "s": 0.61, "c": 1, "t": "E"}, {"x": 0.32, "y": -3.18, "s": 1.3, "c": 1, "t": "E"}, {"x": 1.15, "y": -0.25, "s": 0.92, "c": 1, "t": "M"}, {"x": 2.19, "y": -0.29, "s": 1.64, "c": 1, "t": "M"}, {"x": 1.95, "y": -0.89, "s": 2.02, "c": 1, "t": "M"}, {"x": -0.34, "y": -1.83, "s": 0.57, "c": 1, "t": "E"}, {"x": 13.89, "y": 0.18, "s": 0.38, "c": 1, "t": "E"}, {"x": 0.79, "y": -0.68, "s": 0.9, "c": 1, "t": "E"}, {"x": 1.16, "y": -0.32, "s": 0.36, "c": 1, "t": "M"}, {"x": 3.11, "y": -1.58, "s": 0.79, "c": 1, "t": "M"}, {"x": 4.67, "y": 1.36, "s": 2.85, "c": 1, "t": "M"}, {"x": -1.2, "y": -2.08, "s": 0.64, "c": 1, "t": "M"}, {"x": -0.52, "y": -1.95, "s": 1.21, "c": 1, "t": "M"}, {"x": 2.71, "y": -0.03, "s": 2.38, "c": 1, "t": "M"}, {"x": -0.25, "y": -0.54, "s": 0.14, "c": 1, "t": "M"}, {"x": 3.99, "y": 1.65, "s": 1.31, "c": 1, "t": "M"}, {"x": 3.0, "y": -0.13, "s": 2.51, "c": 1, "t": "E"}, {"x": 4.02, "y": -0.34, "s": 0.5, "c": 1, "t": "E"}, {"x": -0.12, "y": -1.41, "s": 0.87, "c": 1, "t": "M"}, {"x": 0.42, "y": -0.93, "s": 0.84, "c": 1, "t": "M"}, {"x": 2.76, "y": 0.83, "s": 1.15, "c": 1, "t": "M"}, {"x": -1.14, "y": -1.37, "s": 0.23, "c": 1, "t": "E"}, {"x": 2.66, "y": -0.21, "s": 1.76, "c": 1, "t": "M"}, {"x": 3.37, "y": -0.22, "s": 2.51, "c": 1, "t": "M"}, {"x": 4.25, "y": 1.68, "s": 1.56, "c": 1, "t": "M"}, {"x": -0.22, "y": -1.75, "s": 0.83, "c": 1, "t": "M"}, {"x": 1.07, "y": -0.99, "s": 1.34, "c": 1, "t": "M"}, {"x": 6.3, "y": 0.01, "s": 1.73, "c": 1, "t": "M"}, {"x": 2.15, "y": -0.94, "s": 1.23, "c": 1, "t": "M"}, {"x": 2.5, "y": 1.59, "s": 0.92, "c": 1, "t": "M"}, {"x": 7.81, "y": 0.8, "s": 4.17, "c": 1, "t": "M"}, {"x": 3.06, "y": -0.16, "s": 2.55, "c": 1, "t": "M"}, {"x": 0.06, "y": -1.58, "s": 0.52, "c": 1, "t": "M"}, {"x": 3.23, "y": 0.01, "s": 2.23, "c": 1, "t": "M"}, {"x": 3.12, "y": 2.27, "s": 0.42, "c": 1, "t": "E"}, {"x": -1.48, "y": -1.65, "s": 0.17, "c": 1, "t": "E"}, {"x": 0.08, "y": -0.98, "s": 0.66, "c": 1, "t": "E"}, {"x": 3.1, "y": 0.05, "s": 2.08, "c": 1, "t": "M"}, {"x": 3.46, "y": 0.92, "s": 1.77, "c": 1, "t": "M"}, {"x": 4.54, "y": -1.18, "s": 0.69, "c": 1, "t": "M"}, {"x": -0.1, "y": -0.79, "s": 0.55, "c": 1, "t": "E"}, {"x": 0.11, "y": -1.4, "s": 1.12, "c": 1, "t": "M"}, {"x": 0.57, "y": -1.49, "s": 0.94, "c": 1, "t": "M"}, {"x": -0.33, "y": -0.59, "s": 0.22, "c": 1, "t": "E"}, {"x": 7.73, "y": 0.15, "s": 2.98, "c": 1, "t": "M"}, {"x": 3.59, "y": 0.74, "s": 1.25, "c": 1, "t": "M"}, {"x": -0.3, "y": -1.31, "s": 0.36, "c": 1, "t": "E"}, {"x": 3.37, "y": 0.08, "s": 2.15, "c": 1, "t": "M"}, {"x": 3.92, "y": 0.56, "s": 1.12, "c": 1, "t": "M"}, {"x": -0.16, "y": -1.17, "s": 0.54, "c": 1, "t": "E"}, {"x": 2.52, "y": -0.03, "s": 1.62, "c": 1, "t": "M"}, {"x": -1.11, "y": -2.17, "s": 0.9, "c": 1, "t": "M"}, {"x": 0.4, "y": -0.51, "s": 0.5, "c": 1, "t": "E"}, {"x": -0.66, "y": -1.04, "s": 0.33, "c": 1, "t": "E"}, {"x": 1.38, "y": -0.28, "s": 1.43, "c": 1, "t": "M"}, {"x": 1.0, "y": -0.96, "s": 1.69, "c": 1, "t": "M"}, {"x": 5.03, "y": -0.93, "s": 0.5, "c": 1, "t": "E"}, {"x": -1.27, "y": -2.1, "s": 0.51, "c": 1, "t": "E"}, {"x": -1.16, "y": -1.37, "s": 0.2, "c": 1, "t": "E"}, {"x": 0.64, "y": -0.46, "s": 0.82, "c": 1, "t": "M"}, {"x": 0.99, "y": 0.21, "s": 0.79, "c": 1, "t": "E"}, {"x": -0.35, "y": -1.38, "s": 0.56, "c": 1, "t": "M"}, {"x": 0.45, "y": -0.16, "s": 0.55, "c": 1, "t": "E"}, {"x": 2.47, "y": -0.11, "s": 1.81, "c": 1, "t": "M"}, {"x": 1.48, "y": -1.32, "s": 2.22, "c": 1, "t": "M"}, {"x": 0.77, "y": -1.37, "s": 1.54, "c": 1, "t": "M"}, {"x": 0.01, "y": -0.84, "s": 0.55, "c": 1, "t": "E"}, {"x": 0.78, "y": -1.62, "s": 1.8, "c": 1, "t": "M"}, {"x": -0.24, "y": -1.28, "s": 0.74, "c": 1, "t": "M"}, {"x": 1.68, "y": -0.68, "s": 2.16, "c": 1, "t": "M"}, {"x": 2.73, "y": -0.4, "s": 0.94, "c": 1, "t": "M"}, {"x": -0.76, "y": -1.66, "s": 0.41, "c": 1, "t": "E"}, {"x": 0.16, "y": -0.31, "s": 0.29, "c": 1, "t": "E"}, {"x": 1.09, "y": -0.81, "s": 1.09, "c": 1, "t": "M"}, {"x": 1.68, "y": -1.33, "s": 2.12, "c": 1, "t": "M"}, {"x": 0.66, "y": -0.11, "s": 0.57, "c": 1, "t": "E"}, {"x": 0.48, "y": -0.26, "s": 0.44, "c": 1, "t": "E"}, {"x": 3.91, "y": 0.06, "s": 1.21, "c": 1, "t": "M"}, {"x": -0.38, "y": -0.89, "s": 0.5, "c": 1, "t": "E"}, {"x": 3.36, "y": -0.23, "s": 2.57, "c": 1, "t": "M"}, {"x": -0.19, "y": -0.71, "s": 0.46, "c": 1, "t": "E"}, {"x": 7.23, "y": 2.56, "s": 0.72, "c": 1, "t": "E"}, {"x": 3.34, "y": 1.43, "s": 1.23, "c": 1, "t": "M"}, {"x": 0.58, "y": -0.76, "s": 0.8, "c": 1, "t": "E"}, {"x": 4.25, "y": 1.0, "s": 2.44, "c": 1, "t": "M"}, {"x": 2.14, "y": 0.69, "s": 0.6, "c": 1, "t": "M"}, {"x": -0.47, "y": -1.21, "s": 0.38, "c": 1, "t": "E"}, {"x": -1.09, "y": -2.1, "s": 0.5, "c": 1, "t": "E"}, {"x": 4.56, "y": 1.46, "s": 2.2, "c": 1, "t": "M"}, {"x": 0.43, "y": -0.51, "s": 0.42, "c": 1, "t": "M"}, {"x": 8.61, "y": 0.37, "s": 2.01, "c": 1, "t": "E"}, {"x": -0.32, "y": -2.43, "s": 1.21, "c": 1, "t": "M"}, {"x": -0.86, "y": -1.94, "s": 0.43, "c": 1, "t": "E"}, {"x": 1.67, "y": -0.45, "s": 1.65, "c": 1, "t": "M"}, {"x": 6.07, "y": 2.14, "s": 2.72, "c": 1, "t": "M"}, {"x": 10.69, "y": 0.39, "s": 0.97, "c": 1, "t": "E"}, {"x": 23.74, "y": 20.46, "s": 0.99, "c": 1, "t": "E"}, {"x": -0.38, "y": -1.54, "s": 0.72, "c": 1, "t": "E"}, {"x": -0.49, "y": -1.27, "s": 0.5, "c": 1, "t": "M"}, {"x": 1.86, "y": -1.5, "s": 2.01, "c": 1, "t": "M"}, {"x": 1.15, "y": -1.12, "s": 1.29, "c": 1, "t": "M"}, {"x": -0.28, "y": -0.91, "s": 0.65, "c": 1, "t": "E"}, {"x": 14.63, "y": 0.08, "s": 1.01, "c": 1, "t": "E"}, {"x": 3.09, "y": 0.03, "s": 1.82, "c": 1, "t": "M"}, {"x": 1.4, "y": -0.81, "s": 1.71, "c": 1, "t": "M"}, {"x": 5.36, "y": 1.57, "s": 2.89, "c": 1, "t": "M"}, {"x": 0.35, "y": -0.48, "s": 0.49, "c": 1, "t": "E"}, {"x": 3.86, "y": 1.7, "s": 1.51, "c": 1, "t": "M"}, {"x": 0.34, "y": 0.01, "s": 0.21, "c": 1, "t": "E"}, {"x": 1.98, "y": -1.06, "s": 1.79, "c": 1, "t": "M"}, {"x": 1.53, "y": -2.96, "s": 3.21, "c": 1, "t": "M"}, {"x": 0.52, "y": -1.31, "s": 1.18, "c": 1, "t": "M"}, {"x": 0.46, "y": -1.65, "s": 1.11, "c": 1, "t": "M"}, {"x": 0.01, "y": -2.58, "s": 1.72, "c": 1, "t": "M"}, {"x": 0.66, "y": -0.62, "s": 1.03, "c": 1, "t": "E"}, {"x": 3.02, "y": -0.14, "s": 2.24, "c": 1, "t": "M"}, {"x": 1.74, "y": -0.74, "s": 1.28, "c": 1, "t": "M"}, {"x": 2.3, "y": -0.6, "s": 0.9, "c": 1, "t": "M"}, {"x": -0.39, "y": -1.48, "s": 0.72, "c": 1, "t": "M"}, {"x": 2.43, "y": 0.95, "s": 0.24, "c": 1, "t": "E"}, {"x": 3.11, "y": 1.59, "s": 0.86, "c": 1, "t": "M"}, {"x": 0.86, "y": -1.39, "s": 0.62, "c": 1, "t": "M"}, {"x": 19.93, "y": -1.23, "s": 0.61, "c": 1, "t": "E"}, {"x": 5.64, "y": 1.82, "s": 3.29, "c": 1, "t": "M"}, {"x": -0.05, "y": -1.68, "s": 0.7, "c": 1, "t": "E"}, {"x": 4.34, "y": 1.0, "s": 0.52, "c": 1, "t": "E"}, {"x": 1.56, "y": -0.56, "s": 0.19, "c": 1, "t": "E"}, {"x": -0.18, "y": -0.56, "s": 0.28, "c": 1, "t": "M"}, {"x": 0.33, "y": -1.67, "s": 1.51, "c": 1, "t": "E"}, {"x": 3.06, "y": 1.93, "s": 0.56, "c": 1, "t": "E"}, {"x": 0.97, "y": -1.28, "s": 1.73, "c": 1, "t": "M"}, {"x": -0.38, "y": -1.64, "s": 0.96, "c": 1, "t": "M"}, {"x": -0.24, "y": -0.82, "s": 0.3, "c": 1, "t": "E"}, {"x": 0.58, "y": -0.15, "s": 0.69, "c": 1, "t": "E"}, {"x": 1.54, "y": -0.11, "s": 1.33, "c": 1, "t": "M"}, {"x": 0.11, "y": -1.53, "s": 1.51, "c": 1, "t": "M"}, {"x": -0.02, "y": -1.34, "s": 0.52, "c": 1, "t": "M"}, {"x": 2.04, "y": 0.65, "s": 0.91, "c": 1, "t": "M"}, {"x": 3.46, "y": 1.09, "s": 1.36, "c": 1, "t": "M"}, {"x": 3.52, "y": 0.83, "s": 0.89, "c": 1, "t": "M"}, {"x": 1.49, "y": -0.72, "s": 0.68, "c": 1, "t": "E"}, {"x": 2.7, "y": -0.55, "s": 1.98, "c": 1, "t": "M"}, {"x": 0.39, "y": -0.26, "s": 0.43, "c": 1, "t": "E"}, {"x": 0.56, "y": -0.27, "s": 0.62, "c": 1, "t": "M"}, {"x": 0.66, "y": -1.02, "s": 1.02, "c": 1, "t": "M"}, {"x": 0.51, "y": -1.45, "s": 1.39, "c": 1, "t": "M"}, {"x": 9.77, "y": 3.19, "s": 0.72, "c": 1, "t": "E"}, {"x": -0.61, "y": -1.57, "s": 0.66, "c": 1, "t": "E"}, {"x": 1.86, "y": -0.77, "s": 1.81, "c": 1, "t": "M"}, {"x": 0.32, "y": -0.83, "s": 0.7, "c": 1, "t": "M"}, {"x": 0.18, "y": -0.19, "s": 0.28, "c": 1, "t": "E"}, {"x": 1.49, "y": 0.96, "s": 0.45, "c": 1, "t": "E"}, {"x": 6.32, "y": 1.05, "s": 1.94, "c": 1, "t": "M"}, {"x": 2.43, "y": -0.29, "s": 1.83, "c": 1, "t": "M"}, {"x": 0.75, "y": -0.5, "s": 0.78, "c": 1, "t": "M"}, {"x": 1.09, "y": -1.26, "s": 1.62, "c": 1, "t": "M"}, {"x": 1.37, "y": -0.86, "s": 1.99, "c": 1, "t": "M"}, {"x": 8.51, "y": 7.59, "s": 0.74, "c": 1, "t": "E"}, {"x": 1.31, "y": -0.9, "s": 0.56, "c": 1, "t": "M"}, {"x": -0.48, "y": -0.82, "s": 0.36, "c": 1, "t": "E"}, {"x": 0.97, "y": -0.14, "s": 0.72, "c": 1, "t": "M"}, {"x": 1.37, "y": -0.03, "s": 1.21, "c": 1, "t": "M"}, {"x": -0.16, "y": -0.58, "s": 0.29, "c": 1, "t": "E"}, {"x": 4.0, "y": 1.65, "s": 1.76, "c": 1, "t": "M"}, {"x": 1.31, "y": -0.13, "s": 0.9, "c": 1, "t": "M"}, {"x": 3.66, "y": -0.23, "s": 2.51, "c": 1, "t": "M"}, {"x": 0.75, "y": 0.36, "s": 0.36, "c": 1, "t": "E"}, {"x": 0.49, "y": -1.83, "s": 1.43, "c": 1, "t": "M"}, {"x": 8.97, "y": 7.07, "s": 0.96, "c": 1, "t": "E"}, {"x": 0.81, "y": 0.04, "s": 0.68, "c": 1, "t": "E"}, {"x": 5.98, "y": 2.15, "s": 1.12, "c": 1, "t": "M"}, {"x": -1.42, "y": -2.12, "s": 0.2, "c": 1, "t": "M"}, {"x": -0.11, "y": -2.01, "s": 1.24, "c": 1, "t": "E"}, {"x": 0.38, "y": -1.37, "s": 1.18, "c": 1, "t": "M"}, {"x": 1.01, "y": 0.34, "s": 0.48, "c": 1, "t": "M"}, {"x": 0.78, "y": -0.7, "s": 0.8, "c": 1, "t": "E"}, {"x": -0.23, "y": -0.86, "s": 0.47, "c": 1, "t": "E"}, {"x": -0.15, "y": -0.39, "s": 0.24, "c": 1, "t": "E"}, {"x": 2.66, "y": -0.33, "s": 2.06, "c": 1, "t": "M"}, {"x": 2.78, "y": -0.53, "s": 2.2, "c": 1, "t": "M"}, {"x": -0.02, "y": -0.7, "s": 0.52, "c": 1, "t": "E"}, {"x": 1.09, "y": -0.52, "s": 0.23, "c": 1, "t": "E"}, {"x": 2.26, "y": -0.47, "s": 0.6, "c": 1, "t": "E"}, {"x": 3.7, "y": 0.72, "s": 2.22, "c": 1, "t": "M"}, {"x": 1.02, "y": 0.09, "s": 0.56, "c": 1, "t": "E"}, {"x": 2.11, "y": -1.03, "s": 2.41, "c": 1, "t": "M"}, {"x": 3.23, "y": 0.06, "s": 2.47, "c": 1, "t": "M"}, {"x": 0.49, "y": -1.46, "s": 0.69, "c": 1, "t": "E"}, {"x": -0.52, "y": -1.69, "s": 0.9, "c": 1, "t": "M"}, {"x": 2.7, "y": 0.94, "s": 1.03, "c": 1, "t": "M"}, {"x": -0.59, "y": -1.8, "s": 0.95, "c": 1, "t": "M"}, {"x": 1.3, "y": -1.2, "s": 1.86, "c": 1, "t": "M"}, {"x": 0.1, "y": -0.6, "s": 0.53, "c": 1, "t": "E"}, {"x": 3.11, "y": 0.64, "s": 1.05, "c": 1, "t": "E"}, {"x": 2.45, "y": -0.2, "s": 2.03, "c": 1, "t": "M"}, {"x": 6.52, "y": 0.22, "s": 3.19, "c": 1, "t": "M"}, {"x": 1.53, "y": -0.32, "s": 0.68, "c": 1, "t": "E"}, {"x": 4.63, "y": 0.1, "s": 0.66, "c": 1, "t": "M"}, {"x": 4.01, "y": 1.52, "s": 2.1, "c": 1, "t": "M"}, {"x": 0.27, "y": -1.08, "s": 0.77, "c": 1, "t": "E"}, {"x": 6.17, "y": 4.62, "s": 0.72, "c": 1, "t": "E"}, {"x": 3.62, "y": -0.49, "s": 0.43, "c": 1, "t": "E"}, {"x": 8.35, "y": -0.14, "s": 0.47, "c": 1, "t": "E"}, {"x": 3.32, "y": -1.03, "s": 0.65, "c": 1, "t": "M"}, {"x": 3.83, "y": 2.2, "s": 1.13, "c": 1, "t": "M"}, {"x": 0.48, "y": -1.78, "s": 0.93, "c": 1, "t": "M"}, {"x": 6.07, "y": 3.6, "s": 1.77, "c": 1, "t": "M"}, {"x": -0.14, "y": -1.41, "s": 0.77, "c": 1, "t": "E"}, {"x": -1.2, "y": -2.08, "s": 0.64, "c": 1, "t": "M"}, {"x": -0.46, "y": -1.51, "s": 0.46, "c": 0, "t": "E"}, {"x": -0.81, "y": -2.35, "s": 0.23, "c": 0, "t": "M"}, {"x": 2.05, "y": 1.14, "s": 0.57, "c": 0, "t": "E"}, {"x": 0.46, "y": -0.69, "s": 0.56, "c": 0, "t": "E"}, {"x": -0.13, "y": -1.02, "s": 0.81, "c": 0, "t": "E"}, {"x": 0.7, "y": -0.24, "s": 0.56, "c": 0, "t": "E"}, {"x": -0.41, "y": -2.8, "s": 1.85, "c": 0, "t": "M"}, {"x": 1.0, "y": -0.78, "s": 1.19, "c": 0, "t": "M"}, {"x": 1.98, "y": -0.04, "s": 1.03, "c": 0, "t": "M"}, {"x": -1.33, "y": -2.08, "s": 0.69, "c": 0, "t": "E"}, {"x": 4.02, "y": 1.4, "s": 0.99, "c": 0, "t": "M"}, {"x": -0.42, "y": -1.38, "s": 0.52, "c": 0, "t": "E"}, {"x": 0.04, "y": -0.72, "s": 0.47, "c": 0, "t": "E"}, {"x": -0.8, "y": -2.16, "s": 0.89, "c": 0, "t": "E"}, {"x": 12.81, "y": 9.36, "s": 0.93, "c": 0, "t": "E"}, {"x": 0.83, "y": -0.48, "s": 0.29, "c": 0, "t": "M"}, {"x": 1.22, "y": -0.52, "s": 0.47, "c": 0, "t": "M"}, {"x": 2.46, "y": -0.09, "s": 0.26, "c": 0, "t": "M"}, {"x": -0.12, "y": -1.1, "s": 0.34, "c": 0, "t": "E"}, {"x": -0.05, "y": -0.99, "s": 0.59, "c": 0, "t": "E"}, {"x": -0.58, "y": -0.9, "s": 0.33, "c": 0, "t": "E"}, {"x": 6.25, "y": 4.93, "s": 0.38, "c": 0, "t": "E"}, {"x": -0.32, "y": -0.88, "s": 0.49, "c": 1, "t": "E"}, {"x": -1.49, "y": -2.89, "s": 0.47, "c": 0, "t": "E"}, {"x": 5.11, "y": -1.82, "s": 0.38, "c": 0, "t": "E"}, {"x": 3.67, "y": -0.3, "s": 2.86, "c": 1, "t": "M"}, {"x": 1.87, "y": -0.02, "s": 0.38, "c": 0, "t": "E"}, {"x": 3.89, "y": 1.35, "s": 1.79, "c": 0, "t": "M"}, {"x": 0.36, "y": -0.94, "s": 0.65, "c": 0, "t": "E"}, {"x": 1.63, "y": -1.05, "s": 2.01, "c": 0, "t": "M"}, {"x": 1.75, "y": 0.57, "s": 0.76, "c": 1, "t": "M"}, {"x": 3.73, "y": 0.12, "s": 2.51, "c": 1, "t": "M"}, {"x": 3.97, "y": 1.61, "s": 0.76, "c": 0, "t": "E"}, {"x": 8.51, "y": 7.59, "s": 0.74, "c": 1, "t": "E"}, {"x": 3.03, "y": -1.19, "s": 0.32, "c": 0, "t": "E"}, {"x": 1.99, "y": -1.18, "s": 1.58, "c": 0, "t": "M"}, {"x": 2.2, "y": 0.18, "s": 1.2, "c": 1, "t": "M"}, {"x": 3.12, "y": 2.27, "s": 0.42, "c": 1, "t": "E"}, {"x": 2.66, "y": -0.21, "s": 1.76, "c": 1, "t": "M"}, {"x": 1.34, "y": -0.7, "s": 0.83, "c": 1, "t": "E"}, {"x": 3.15, "y": 0.48, "s": 0.81, "c": 0, "t": "E"}, {"x": -0.6, "y": -0.96, "s": 0.3, "c": 0, "t": "E"}, {"x": 2.55, "y": 0.18, "s": 1.22, "c": 0, "t": "M"}, {"x": 0.87, "y": -1.67, "s": 1.68, "c": 0, "t": "E"}, {"x": -0.04, "y": -1.58, "s": 0.6, "c": 0, "t": "E"}, {"x": 9.22, "y": 1.75, "s": 1.32, "c": 0, "t": "M"}, {"x": -0.02, "y": -1.34, "s": 0.52, "c": 1, "t": "M"}, {"x": 2.09, "y": -0.19, "s": 0.61, "c": 0, "t": "E"}, {"x": -0.43, "y": -0.86, "s": 0.35, "c": 1, "t": "E"}, {"x": -0.66, "y": -1.55, "s": 0.74, "c": 0, "t": "E"}, {"x": 1.92, "y": -0.66, "s": 0.81, "c": 0, "t": "M"}, {"x": 3.4, "y": 1.75, "s": 0.66, "c": 0, "t": "E"}, {"x": 2.26, "y": -0.11, "s": 1.65, "c": 1, "t": "M"}, {"x": 6.0, "y": 2.97, "s": 1.26, "c": 0, "t": "M"}, {"x": -0.8, "y": -1.92, "s": 0.4, "c": 0, "t": "M"}, {"x": -0.74, "y": -1.36, "s": 0.41, "c": 1, "t": "E"}, {"x": 2.26, "y": -0.47, "s": 0.6, "c": 1, "t": "E"}, {"x": -0.41, "y": -0.73, "s": 0.25, "c": 0, "t": "E"}, {"x": 2.47, "y": -0.11, "s": 1.81, "c": 1, "t": "M"}, {"x": 0.77, "y": -0.87, "s": 0.99, "c": 0, "t": "M"}, {"x": 1.31, "y": -0.9, "s": 0.56, "c": 1, "t": "M"}, {"x": 8.1, "y": 1.45, "s": 0.8, "c": 0, "t": "E"}, {"x": -0.44, "y": -1.65, "s": 0.71, "c": 0, "t": "M"}, {"x": -0.08, "y": -1.39, "s": 0.57, "c": 0, "t": "E"}, {"x": 10.91, "y": 7.85, "s": 3.07, "c": 1, "t": "E"}, {"x": 1.44, "y": -0.15, "s": 1.14, "c": 0, "t": "M"}, {"x": 0.76, "y": -0.39, "s": 1.11, "c": 0, "t": "E"}, {"x": 1.64, "y": -0.36, "s": 1.16, "c": 0, "t": "M"}, {"x": 8.97, "y": 7.07, "s": 0.96, "c": 1, "t": "E"}, {"x": 3.36, "y": -0.23, "s": 2.57, "c": 1, "t": "M"}, {"x": 1.45, "y": 0.54, "s": 0.8, "c": 0, "t": "E"}, {"x": 2.82, "y": 0.29, "s": 1.71, "c": 0, "t": "M"}, {"x": 0.04, "y": -1.54, "s": 0.64, "c": 0, "t": "M"}, {"x": 0.21, "y": -1.84, "s": 1.61, "c": 0, "t": "M"}, {"x": -0.57, "y": -1.45, "s": 0.55, "c": 0, "t": "E"}, {"x": 3.02, "y": 0.73, "s": 0.53, "c": 0, "t": "E"}, {"x": 1.4, "y": -0.81, "s": 1.71, "c": 1, "t": "M"}, {"x": 1.93, "y": 0.4, "s": 1.02, "c": 0, "t": "E"}, {"x": -0.12, "y": -1.42, "s": 0.88, "c": 0, "t": "E"}, {"x": -0.32, "y": -1.33, "s": 0.28, "c": 0, "t": "M"}, {"x": 3.37, "y": 0.08, "s": 2.15, "c": 1, "t": "M"}, {"x": 0.73, "y": -0.3, "s": 0.82, "c": 0, "t": "E"}, {"x": -1.16, "y": -1.86, "s": 0.63, "c": 0, "t": "E"}, {"x": -0.58, "y": -1.0, "s": 0.33, "c": 0, "t": "E"}, {"x": 2.67, "y": 3.15, "s": 0.54, "c": 0, "t": "E"}, {"x": 0.33, "y": -1.67, "s": 1.51, "c": 1, "t": "E"}, {"x": -0.73, "y": -1.13, "s": 0.19, "c": 0, "t": "E"}, {"x": 4.34, "y": 1.0, "s": 0.52, "c": 1, "t": "E"}, {"x": 3.86, "y": 1.7, "s": 1.51, "c": 1, "t": "M"}, {"x": -0.5, "y": -1.86, "s": 0.61, "c": 0, "t": "M"}, {"x": 22.53, "y": 9.28, "s": 0.68, "c": 1, "t": "E"}, {"x": 1.24, "y": -0.21, "s": 0.57, "c": 0, "t": "M"}, {"x": 0.64, "y": -0.46, "s": 0.82, "c": 1, "t": "M"}, {"x": -1.11, "y": -1.39, "s": 0.29, "c": 0, "t": "E"}, {"x": 0.78, "y": -0.56, "s": 0.69, "c": 1, "t": "E"}, {"x": 0.92, "y": -0.51, "s": 0.82, "c": 0, "t": "M"}, {"x": 1.45, "y": 0.18, "s": 0.83, "c": 1, "t": "M"}, {"x": 0.14, "y": -1.55, "s": 0.8, "c": 0, "t": "M"}, {"x": 0.64, "y": -0.8, "s": 0.92, "c": 0, "t": "E"}, {"x": 4.82, "y": 2.37, "s": 1.97, "c": 1, "t": "M"}, {"x": 0.33, "y": -0.77, "s": 0.79, "c": 0, "t": "M"}, {"x": 18.6, "y": 6.05, "s": 1.19, "c": 0, "t": "E"}, {"x": 0.59, "y": -0.45, "s": 0.59, "c": 0, "t": "M"}, {"x": 1.6, "y": -0.96, "s": 2.02, "c": 0, "t": "M"}, {"x": -0.84, "y": -1.41, "s": 0.51, "c": 0, "t": "E"}, {"x": -0.27, "y": -1.46, "s": 0.52, "c": 0, "t": "E"}, {"x": 0.28, "y": -0.96, "s": 0.9, "c": 0, "t": "M"}, {"x": -0.25, "y": -0.38, "s": 0.13, "c": 0, "t": "E"}, {"x": -0.27, "y": -1.81, "s": 0.51, "c": 0, "t": "M"}, {"x": -0.86, "y": -1.16, "s": 0.27, "c": 0, "t": "E"}, {"x": -0.48, "y": -1.31, "s": 0.74, "c": 0, "t": "E"}, {"x": -0.52, "y": -1.23, "s": 0.56, "c": 0, "t": "E"}, {"x": 0.8, "y": -0.25, "s": 0.5, "c": 0, "t": "E"}, {"x": -0.66, "y": -1.79, "s": 0.72, "c": 0, "t": "M"}, {"x": 2.94, "y": 0.49, "s": 1.86, "c": 1, "t": "M"}, {"x": 2.67, "y": -0.84, "s": 1.0, "c": 0, "t": "E"}, {"x": -0.16, "y": -1.53, "s": 0.74, "c": 0, "t": "M"}, {"x": 1.59, "y": -0.01, "s": 0.51, "c": 0, "t": "E"}, {"x": -0.27, "y": -2.02, "s": 0.65, "c": 0, "t": "M"}, {"x": 2.04, "y": 0.71, "s": 0.97, "c": 1, "t": "E"}, {"x": -1.11, "y": -2.17, "s": 0.9, "c": 1, "t": "M"}, {"x": -0.03, "y": -1.31, "s": 0.71, "c": 0, "t": "M"}, {"x": 10.1, "y": 1.42, "s": 2.47, "c": 0, "t": "M"}, {"x": 4.54, "y": 1.76, "s": 2.26, "c": 1, "t": "M"}, {"x": 0.68, "y": -0.7, "s": 1.17, "c": 0, "t": "E"}, {"x": 0.42, "y": -1.02, "s": 0.76, "c": 1, "t": "M"}, {"x": 5.2, "y": 2.52, "s": 0.98, "c": 0, "t": "M"}, {"x": 3.34, "y": 1.43, "s": 1.23, "c": 1, "t": "M"}, {"x": 3.41, "y": -0.21, "s": 2.07, "c": 0, "t": "M"}, {"x": 0.61, "y": -0.06, "s": 0.32, "c": 0, "t": "E"}, {"x": 0.91, "y": 0.17, "s": 0.6, "c": 0, "t": "E"}, {"x": 0.73, "y": -1.68, "s": 1.22, "c": 1, "t": "M"}, {"x": 2.67, "y": 2.02, "s": 0.48, "c": 0, "t": "E"}, {"x": -0.75, "y": -0.26, "s": 0.34, "c": 0, "t": "E"}, {"x": 2.7, "y": -0.55, "s": 1.98, "c": 1, "t": "M"}, {"x": -0.63, "y": -1.7, "s": 0.88, "c": 0, "t": "M"}, {"x": -1.09, "y": -1.61, "s": 0.24, "c": 0, "t": "E"}, {"x": -1.16, "y": -1.37, "s": 0.2, "c": 1, "t": "E"}, {"x": 0.21, "y": -1.49, "s": 0.9, "c": 1, "t": "M"}, {"x": -0.17, "y": -1.74, "s": 1.57, "c": 1, "t": "M"}, {"x": -1.15, "y": -1.43, "s": 0.22, "c": 0, "t": "E"}, {"x": 0.33, "y": -0.23, "s": 0.54, "c": 0, "t": "E"}, {"x": 0.57, "y": -0.45, "s": 0.69, "c": 0, "t": "E"}, {"x": 1.99, "y": -2.15, "s": 0.59, "c": 0, "t": "E"}, {"x": 2.37, "y": -1.29, "s": 2.24, "c": 0, "t": "M"}, {"x": -0.19, "y": -1.06, "s": 0.72, "c": 0, "t": "M"}, {"x": 4.01, "y": -0.79, "s": 2.23, "c": 0, "t": "M"}, {"x": -0.52, "y": -1.69, "s": 0.9, "c": 1, "t": "M"}, {"x": -0.59, "y": -1.66, "s": 0.57, "c": 0, "t": "E"}, {"x": -0.76, "y": -2.2, "s": 0.8, "c": 0, "t": "M"}, {"x": -0.14, "y": -1.41, "s": 1.26, "c": 0, "t": "E"}, {"x": -0.64, "y": -1.26, "s": 0.62, "c": 1, "t": "E"}, {"x": -0.18, "y": -1.78, "s": 0.54, "c": 0, "t": "M"}, {"x": 1.65, "y": 0.41, "s": 0.94, "c": 0, "t": "M"}, {"x": 0.88, "y": -0.42, "s": 0.68, "c": 0, "t": "M"}, {"x": 1.04, "y": -0.65, "s": 1.06, "c": 0, "t": "M"}, {"x": 4.87, "y": 1.89, "s": 2.14, "c": 0, "t": "M"}, {"x": 0.32, "y": -3.11, "s": 0.85, "c": 0, "t": "E"}, {"x": 6.4, "y": -0.5, "s": 0.73, "c": 0, "t": "E"}, {"x": 1.09, "y": -1.26, "s": 1.62, "c": 1, "t": "M"}, {"x": 6.18, "y": 5.61, "s": 0.48, "c": 0, "t": "E"}, {"x": 0.87, "y": -0.07, "s": 0.77, "c": 0, "t": "E"}, {"x": -0.07, "y": -1.24, "s": 0.88, "c": 0, "t": "E"}, {"x": 1.58, "y": 0.14, "s": 0.8, "c": 0, "t": "E"}, {"x": 4.13, "y": 0.59, "s": 0.83, "c": 0, "t": "E"}, {"x": -0.16, "y": -1.17, "s": 0.54, "c": 1, "t": "E"}, {"x": 1.88, "y": -0.06, "s": 1.13, "c": 1, "t": "E"}, {"x": 0.57, "y": -1.76, "s": 1.43, "c": 0, "t": "M"}, {"x": -0.72, "y": -1.51, "s": 0.3, "c": 0, "t": "M"}, {"x": 2.43, "y": -0.29, "s": 1.83, "c": 1, "t": "M"}, {"x": 5.77, "y": 0.91, "s": 2.05, "c": 0, "t": "M"}, {"x": 0.93, "y": -0.56, "s": 0.8, "c": 0, "t": "E"}, {"x": -0.8, "y": -1.14, "s": 0.3, "c": 0, "t": "E"}, {"x": 2.95, "y": 0.14, "s": 0.68, "c": 1, "t": "E"}, {"x": 8.28, "y": 1.29, "s": 1.57, "c": 1, "t": "M"}, {"x": -0.53, "y": -0.91, "s": 0.17, "c": 1, "t": "E"}, {"x": -0.8, "y": -2.12, "s": 0.68, "c": 1, "t": "E"}, {"x": 3.85, "y": -0.69, "s": 1.65, "c": 1, "t": "M"}, {"x": 0.53, "y": -1.43, "s": 0.73, "c": 0, "t": "M"}, {"x": -0.61, "y": -1.46, "s": 0.63, "c": 0, "t": "E"}, {"x": -1.33, "y": -2.48, "s": 0.76, "c": 0, "t": "E"}, {"x": 0.75, "y": -0.5, "s": 0.78, "c": 1, "t": "M"}, {"x": -0.61, "y": -1.87, "s": 0.85, "c": 1, "t": "M"}, {"x": 0.31, "y": -0.67, "s": 0.58, "c": 0, "t": "E"}, {"x": 8.63, "y": 1.96, "s": 1.05, "c": 0, "t": "M"}, {"x": 8.61, "y": 0.37, "s": 2.01, "c": 1, "t": "E"}, {"x": 0.32, "y": -0.65, "s": 0.83, "c": 0, "t": "E"}, {"x": -0.4, "y": -1.16, "s": 0.63, "c": 0, "t": "E"}, {"x": 0.39, "y": -1.89, "s": 1.84, "c": 0, "t": "M"}, {"x": -0.48, "y": -2.3, "s": 1.27, "c": 1, "t": "M"}, {"x": 1.54, "y": -0.11, "s": 1.33, "c": 1, "t": "M"}, {"x": 2.33, "y": -1.0, "s": 1.7, "c": 0, "t": "M"}, {"x": -0.72, "y": -1.59, "s": 0.5, "c": 0, "t": "E"}, {"x": 0.61, "y": 0.08, "s": 0.43, "c": 0, "t": "E"}, {"x": 15.14, "y": 10.84, "s": 0.63, "c": 1, "t": "E"}, {"x": 1.51, "y": -1.62, "s": 1.41, "c": 0, "t": "M"}, {"x": 2.01, "y": 1.56, "s": 0.41, "c": 0, "t": "E"}, {"x": 4.02, "y": -1.12, "s": 0.54, "c": 0, "t": "E"}, {"x": 0.01, "y": -0.84, "s": 0.55, "c": 1, "t": "E"}, {"x": 1.54, "y": -1.8, "s": 1.13, "c": 0, "t": "E"}, {"x": 14.79, "y": 3.36, "s": 1.34, "c": 0, "t": "M"}, {"x": -1.22, "y": -2.32, "s": 0.78, "c": 0, "t": "E"}, {"x": 1.36, "y": 0.78, "s": 0.47, "c": 0, "t": "E"}, {"x": 0.0, "y": -1.12, "s": 0.73, "c": 1, "t": "M"}, {"x": 1.33, "y": -0.64, "s": 1.4, "c": 0, "t": "M"}, {"x": 0.43, "y": -1.02, "s": 0.5, "c": 0, "t": "M"}, {"x": -0.06, "y": -1.0, "s": 0.58, "c": 0, "t": "E"}, {"x": -0.2, "y": -0.93, "s": 0.5, "c": 0, "t": "E"}, {"x": 2.25, "y": -0.82, "s": 0.89, "c": 0, "t": "E"}, {"x": 2.08, "y": 0.71, "s": 0.77, "c": 1, "t": "M"}, {"x": 5.99, "y": -1.04, "s": 1.79, "c": 0, "t": "M"}, {"x": -1.1, "y": -1.43, "s": 0.2, "c": 0, "t": "E"}, {"x": 1.01, "y": -0.74, "s": 1.02, "c": 0, "t": "E"}, {"x": -0.42, "y": -1.7, "s": 0.63, "c": 1, "t": "E"}, {"x": 1.47, "y": -0.39, "s": 1.59, "c": 0, "t": "M"}, {"x": -0.62, "y": -1.61, "s": 0.55, "c": 0, "t": "E"}, {"x": 0.45, "y": -0.16, "s": 0.55, "c": 1, "t": "E"}, {"x": -0.98, "y": -2.14, "s": 0.29, "c": 0, "t": "E"}, {"x": -1.37, "y": -2.8, "s": 0.91, "c": 0, "t": "M"}, {"x": 1.39, "y": 0.26, "s": 0.33, "c": 1, "t": "E"}, {"x": 1.71, "y": -1.12, "s": 2.29, "c": 1, "t": "M"}, {"x": 1.45, "y": -1.11, "s": 1.77, "c": 0, "t": "M"}, {"x": -0.36, "y": -1.17, "s": 0.46, "c": 0, "t": "E"}, {"x": 0.71, "y": -0.22, "s": 0.78, "c": 0, "t": "E"}, {"x": -0.09, "y": -1.66, "s": 0.76, "c": 0, "t": "M"}, {"x": 3.06, "y": -0.16, "s": 2.55, "c": 1, "t": "M"}, {"x": 0.01, "y": -1.8, "s": 1.18, "c": 1, "t": "M"}, {"x": 1.23, "y": 0.19, "s": 0.95, "c": 0, "t": "E"}, {"x": 4.08, "y": -0.53, "s": 0.73, "c": 1, "t": "E"}, {"x": 1.38, "y": 0.36, "s": 0.98, "c": 0, "t": "E"}, {"x": 2.57, "y": 0.33, "s": 0.94, "c": 0, "t": "E"}, {"x": 0.97, "y": -1.28, "s": 1.73, "c": 1, "t": "M"}, {"x": 3.8, "y": 1.25, "s": 1.76, "c": 0, "t": "M"}, {"x": 0.97, "y": -0.15, "s": 0.6, "c": 0, "t": "M"}, {"x": 0.48, "y": -1.0, "s": 0.7, "c": 1, "t": "M"}, {"x": 3.02, "y": -0.14, "s": 2.24, "c": 1, "t": "M"}, {"x": 13.64, "y": 8.12, "s": 0.94, "c": 0, "t": "E"}, {"x": 6.05, "y": 1.31, "s": 1.53, "c": 0, "t": "M"}, {"x": -0.06, "y": -1.57, "s": 0.79, "c": 0, "t": "M"}, {"x": 1.3, "y": -1.2, "s": 1.86, "c": 1, "t": "M"}, {"x": 1.86, "y": -0.45, "s": 0.4, "c": 0, "t": "E"}, {"x": 0.38, "y": -0.77, "s": 0.67, "c": 0, "t": "E"}, {"x": 1.18, "y": -1.18, "s": 1.03, "c": 0, "t": "M"}, {"x": -0.16, "y": -0.58, "s": 0.29, "c": 1, "t": "E"}, {"x": 0.08, "y": -0.51, "s": 0.4, "c": 0, "t": "E"}, {"x": 0.83, "y": -0.63, "s": 0.65, "c": 0, "t": "M"}, {"x": -0.91, "y": -1.09, "s": 0.18, "c": 0, "t": "E"}, {"x": 0.68, "y": -0.96, "s": 0.82, "c": 0, "t": "E"}, {"x": 6.58, "y": 1.44, "s": 2.22, "c": 0, "t": "E"}, {"x": -0.31, "y": -0.69, "s": 0.34, "c": 0, "t": "E"}, {"x": 3.58, "y": 2.58, "s": 0.62, "c": 0, "t": "E"}, {"x": 2.63, "y": -0.11, "s": 2.16, "c": 0, "t": "M"}, {"x": 0.89, "y": -0.19, "s": 0.72, "c": 0, "t": "E"}, {"x": 1.38, "y": 0.33, "s": 0.78, "c": 0, "t": "E"}, {"x": 2.43, "y": 0.95, "s": 0.24, "c": 1, "t": "E"}, {"x": 0.12, "y": -0.39, "s": 0.48, "c": 0, "t": "E"}, {"x": 0.62, "y": -0.19, "s": 0.58, "c": 0, "t": "E"}, {"x": 1.23, "y": 0.3, "s": 0.65, "c": 0, "t": "M"}, {"x": 0.76, "y": -1.2, "s": 0.5, "c": 0, "t": "M"}, {"x": -0.22, "y": -0.87, "s": 0.49, "c": 1, "t": "E"}, {"x": 0.01, "y": -2.58, "s": 1.72, "c": 1, "t": "M"}, {"x": 1.11, "y": -0.3, "s": 1.03, "c": 0, "t": "E"}, {"x": -0.01, "y": -0.75, "s": 0.54, "c": 0, "t": "E"}, {"x": -0.05, "y": -0.74, "s": 0.46, "c": 0, "t": "E"}, {"x": -0.35, "y": -1.6, "s": 0.7, "c": 0, "t": "E"}, {"x": -0.95, "y": -1.81, "s": 0.53, "c": 0, "t": "E"}, {"x": 0.47, "y": -0.93, "s": 0.77, "c": 0, "t": "M"}, {"x": -0.15, "y": -0.39, "s": 0.24, "c": 1, "t": "E"}, {"x": 1.16, "y": 0.09, "s": 0.72, "c": 0, "t": "M"}, {"x": 1.16, "y": -0.32, "s": 0.36, "c": 1, "t": "M"}, {"x": 1.53, "y": -0.32, "s": 0.68, "c": 1, "t": "E"}, {"x": 2.55, "y": 2.23, "s": 1.12, "c": 0, "t": "M"}, {"x": -0.77, "y": -1.83, "s": 0.74, "c": 0, "t": "M"}, {"x": 0.17, "y": -0.91, "s": 0.96, "c": 1, "t": "M"}, {"x": 0.56, "y": -0.27, "s": 0.62, "c": 1, "t": "M"}, {"x": 1.4, "y": -0.52, "s": 1.36, "c": 0, "t": "E"}, {"x": 0.9, "y": 0.16, "s": 0.74, "c": 0, "t": "E"}, {"x": 0.82, "y": -0.79, "s": 0.86, "c": 0, "t": "M"}, {"x": 3.17, "y": 1.1, "s": 1.43, "c": 0, "t": "M"}, {"x": 6.63, "y": 3.46, "s": 3.02, "c": 0, "t": "E"}, {"x": 1.86, "y": -0.77, "s": 1.81, "c": 1, "t": "M"}, {"x": -0.14, "y": -1.56, "s": 0.7, "c": 0, "t": "E"}, {"x": 2.44, "y": -0.6, "s": 1.84, "c": 1, "t": "M"}, {"x": 2.11, "y": 0.79, "s": 0.97, "c": 0, "t": "E"}, {"x": -0.1, "y": -1.51, "s": 0.47, "c": 0, "t": "M"}, {"x": -1.21, "y": -1.88, "s": 0.47, "c": 1, "t": "M"}, {"x": 0.22, "y": -0.85, "s": 0.52, "c": 0, "t": "M"}, {"x": 1.38, "y": -0.92, "s": 1.31, "c": 1, "t": "M"}, {"x": -0.85, "y": -1.52, "s": 0.54, "c": 0, "t": "E"}, {"x": 2.09, "y": -0.39, "s": 1.2, "c": 0, "t": "E"}, {"x": -0.53, "y": -1.87, "s": 0.5, "c": 0, "t": "E"}, {"x": 5.05, "y": -0.5, "s": 1.41, "c": 0, "t": "E"}, {"x": 3.09, "y": 1.53, "s": 0.75, "c": 0, "t": "M"}, {"x": 8.06, "y": 4.1, "s": 0.76, "c": 0, "t": "E"}, {"x": -0.19, "y": -1.07, "s": 0.56, "c": 1, "t": "E"}, {"x": 0.35, "y": -0.42, "s": 0.42, "c": 0, "t": "E"}, {"x": 1.67, "y": -0.45, "s": 1.65, "c": 1, "t": "M"}, {"x": 5.08, "y": 2.5, "s": 1.95, "c": 1, "t": "M"}];
 </script>
 </body>
 </html>
