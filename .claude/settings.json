@@ -1,0 +1,13 @@
+{
+  "env": {
+    "GOOGLE_APPLICATION_CREDENTIALS": "/root/.config/gcp/credentials.json",
+    "GCLOUD_PROJECT": "meli-bi-data"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(pip install *)",
+      "Bash(python *)",
+      "Bash(python3 *)"
+    ]
+  }
+}
