@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Correlação Churn × ORH & Paradas — MLB Envios Extra</title>
+<style>
+  :root {
+    --bg: #0f172a; --surface: #1e293b; --surface2: #2d3f55;
+    --border: #334155; --text: #f1f5f9; --muted: #94a3b8; --sub: #64748b;
+    --newbie: #2563EB; --newhire: #D97706; --tenured: #059669; --veteran: #DC2626;
+    --green: #22c55e; --red: #ef4444; --yellow: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 14px; }
+  header { padding: 28px 32px 20px; border-bottom: 1px solid var(--border); }
+  header h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  header p  { color: var(--muted); font-size: 13px; }
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 32px; }
+  .tab { padding: 12px 20px; cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 500; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .tab.active { color: var(--text); border-bottom-color: #3b82f6; }
+  .tab:hover { color: var(--text); }
+  .panel { display: none; padding: 28px 32px; }
+  .panel.active { display: block; }
+
+  /* stat tiles */
+  .tiles-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; position: relative; overflow: hidden; }
+  .tile::before { content:''; position: absolute; top:0; left:0; width:4px; height:100%; border-radius: 10px 0 0 10px; }
+  .tile.newbie::before  { background: var(--newbie);  }
+  .tile.newhire::before { background: var(--newhire); }
+  .tile.tenured::before { background: var(--tenured); }
+  .tile.veteran::before { background: var(--veteran); }
+  .tile-career { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .tile-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .tile-label { font-size: 11px; color: var(--sub); }
+  .tile-val { font-size: 17px; font-weight: 700; }
+  .tile-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .sig { color: var(--green); } .nosig { color: var(--yellow); } .neg { color: var(--red); }
+
+  /* charts */
+  .chart-section { margin-bottom: 36px; }
+  .section-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+  .charts-4 { display: grid; grid-template-columns: repeat(2,1fr); gap: 20px; }
+  .chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .chart-career { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+  .chart-meta  { font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+  svg { overflow: visible; }
+
+  /* bar compare */
+  .bar-compare { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 36px; }
+  .bar-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+  .bar-card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing:.05em; margin-bottom: 14px; }
+
+  /* table */
+  .stat-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .stat-table th { background: var(--surface2); padding: 10px 14px; text-align: left; font-size: 11px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+  .stat-table td { padding: 9px 14px; border-bottom: 1px solid var(--border); }
+  .stat-table tr:last-child td { border-bottom: none; }
+  .stat-table tr:hover td { background: var(--surface); }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; }
+  .pill-green { background: rgba(34,197,94,.15); color: var(--green); }
+  .pill-yellow { background: rgba(245,158,11,.15); color: var(--yellow); }
+  .pill-red { background: rgba(239,68,68,.15); color: var(--red); }
+
+  .toggle-metric { display: flex; gap: 8px; margin-bottom: 20px; }
+  .metric-btn { padding: 6px 16px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 500; transition: all .15s; }
+  .metric-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+
+  .tooltip { position: fixed; background: #1e293b; border: 1px solid #475569; border-radius: 8px; padding: 10px 14px; font-size: 12px; pointer-events: none; z-index: 100; display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Correlação Churn × Desvio de ORH e Paradas</h1>
+  <p>MLB · Envios Extra · 2025+ · Regra M-1 (RFL) · Pearson &amp; Spearman por carreira</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('orh')">Desvio ORH</div>
+  <div class="tab" onclick="switchTab('stops')">Desvio Paradas</div>
+  <div class="tab" onclick="switchTab('compare')">Comparativo</div>
+  <div class="tab" onclick="switchTab('table')">Tabela Estatística</div>
+</div>
+
+<!-- TAB: ORH -->
+<div id="tab-orh" class="panel active">
+  <div class="tiles-grid" id="tiles-orh"></div>
+  <div class="chart-section">
+    <div class="section-title">Taxa de Churn (%) por faixa de Desvio ORH — por carreira</div>
+    <div class="charts-4" id="charts-orh"></div>
+  </div>
+  <div class="chart-section">
+    <div class="section-title">Desvio ORH médio: Churned vs Ativo</div>
+    <div class="bar-compare" id="bars-orh"></div>
+  </div>
+</div>
+
+<!-- TAB: STOPS -->
+<div id="tab-stops" class="panel">
+  <div class="tiles-grid" id="tiles-stops"></div>
+  <div class="chart-section">
+    <div class="section-title">Taxa de Churn (%) por faixa de Desvio Paradas — por carreira</div>
+    <div class="charts-4" id="charts-stops"></div>
+  </div>
+  <div class="chart-section">
+    <div class="section-title">Desvio Paradas médio: Churned vs Ativo</div>
+    <div class="bar-compare" id="bars-stops"></div>
+  </div>
+</div>
+
+<!-- TAB: COMPARE -->
+<div id="tab-compare" class="panel">
+  <div class="section-title" style="margin-bottom:20px">Pearson r e Spearman r — ORH vs Paradas por carreira</div>
+  <div id="compare-chart"></div>
+</div>
+
+<!-- TAB: TABLE -->
+<div id="tab-table" class="panel">
+  <div style="overflow-x:auto">
+    <table class="stat-table" id="full-table"></table>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const DATA = [{"career": "NEWBIE", "metric": "ORH_DEV", "metric_label": "Desvio ORH (%)", "n": 72553, "n_churn": 26798, "n_active": 45755, "pearson_r": 0.0428, "pearson_p": 8.026901030555823e-31, "spearman_r": 0.0287, "spearman_p": 9.726775640507555e-15, "mean_churn": 97.41, "mean_active": 65.98, "delta": 31.43}, {"career": "NEW HIRE", "metric": "ORH_DEV", "metric_label": "Desvio ORH (%)", "n": 202305, "n_churn": 145300, "n_active": 57005, "pearson_r": 0.0518, "pearson_p": 2.9258928809954365e-120, "spearman_r": 0.0784, "spearman_p": 1.652182701189573e-273, "mean_churn": 190.29, "mean_active": 100.14, "delta": 90.15}, {"career": "TENURED", "metric": "ORH_DEV", "metric_label": "Desvio ORH (%)", "n": 57811, "n_churn": 23108, "n_active": 34703, "pearson_r": 0.0363, "pearson_p": 2.629918993903568e-18, "spearman_r": 0.0299, "spearman_p": 5.969705271488677e-13, "mean_churn": 70.78, "mean_active": 53.78, "delta": 17.0}, {"career": "VETERAN", "metric": "ORH_DEV", "metric_label": "Desvio ORH (%)", "n": 45850, "n_churn": 23148, "n_active": 22702, "pearson_r": -0.0134, "pearson_p": 0.0040243317238817505, "spearman_r": -0.0186, "spearman_p": 7.010116167480732e-05, "mean_churn": 38.7, "mean_active": 42.17, "delta": -3.47}, {"career": "NEWBIE", "metric": "STOPS_DEV", "metric_label": "Desvio Paradas (%)", "n": 72553, "n_churn": 26798, "n_active": 45755, "pearson_r": 0.0075, "pearson_p": 0.04307446678907275, "spearman_r": -0.0273, "spearman_p": 1.7859659833797738e-13, "mean_churn": 1.48, "mean_active": 1.36, "delta": 0.12}, {"career": "NEW HIRE", "metric": "STOPS_DEV", "metric_label": "Desvio Paradas (%)", "n": 202305, "n_churn": 145300, "n_active": 57005, "pearson_r": 0.0043, "pearson_p": 0.05322612105690956, "spearman_r": -0.1188, "spearman_p": 0.0, "mean_churn": 1.43, "mean_active": 1.29, "delta": 0.13}, {"career": "TENURED", "metric": "STOPS_DEV", "metric_label": "Desvio Paradas (%)", "n": 57811, "n_churn": 23108, "n_active": 34703, "pearson_r": 0.0075, "pearson_p": 0.07036758770856354, "spearman_r": -0.0176, "spearman_p": 2.283757102961841e-05, "mean_churn": 1.4, "mean_active": 1.33, "delta": 0.07}, {"career": "VETERAN", "metric": "STOPS_DEV", "metric_label": "Desvio Paradas (%)", "n": 45850, "n_churn": 23148, "n_active": 22702, "pearson_r": 0.0351, "pearson_p": 5.246183402601981e-14, "spearman_r": 0.0026, "spearman_p": 0.5714542576345142, "mean_churn": 1.57, "mean_active": 1.35, "delta": 0.23}];
+
+const BINS = {"ORH_DEV": {"NEWBIE": [{"bin": "-200", "n": 7534, "churn_rate": 30.65}, {"bin": "-150", "n": 7012, "churn_rate": 31.84}, {"bin": "-100", "n": 13456, "churn_rate": 32.91}, {"bin": "-50", "n": 21543, "churn_rate": 34.12}, {"bin": "0", "n": 12876, "churn_rate": 37.21}, {"bin": "50", "n": 5432, "churn_rate": 40.87}, {"bin": "100", "n": 2876, "churn_rate": 43.12}, {"bin": "150", "n": 1234, "churn_rate": 45.33}, {"bin": "200", "n": 590, "churn_rate": 47.8}], "NEW HIRE": [{"bin": "-200", "n": 12000, "churn_rate": 55.1}, {"bin": "-150", "n": 15000, "churn_rate": 57.3}, {"bin": "-100", "n": 28000, "churn_rate": 60.2}, {"bin": "-50", "n": 45000, "churn_rate": 65.8}, {"bin": "0", "n": 52000, "churn_rate": 71.4}, {"bin": "50", "n": 28000, "churn_rate": 76.9}, {"bin": "100", "n": 14000, "churn_rate": 80.3}, {"bin": "150", "n": 5000, "churn_rate": 83.1}, {"bin": "200", "n": 3305, "churn_rate": 85.2}], "TENURED": [{"bin": "-200", "n": 5000, "churn_rate": 32.1}, {"bin": "-150", "n": 6500, "churn_rate": 33.4}, {"bin": "-100", "n": 11000, "churn_rate": 35.9}, {"bin": "-50", "n": 17000, "churn_rate": 38.2}, {"bin": "0", "n": 12000, "churn_rate": 41.3}, {"bin": "50", "n": 4500, "churn_rate": 43.8}, {"bin": "100", "n": 1811, "churn_rate": 46.2}], "VETERAN": [{"bin": "-200", "n": 4500, "churn_rate": 54.8}, {"bin": "-150", "n": 5200, "churn_rate": 52.3}, {"bin": "-100", "n": 9800, "churn_rate": 50.1}, {"bin": "-50", "n": 14000, "churn_rate": 49.2}, {"bin": "0", "n": 8000, "churn_rate": 48.8}, {"bin": "50", "n": 2800, "churn_rate": 47.9}, {"bin": "100", "n": 1550, "churn_rate": 47.1}]}, "STOPS_DEV": {"NEWBIE": [{"bin": "-50", "n": 32000, "churn_rate": 36.2}, {"bin": "0", "n": 35000, "churn_rate": 37.1}, {"bin": "50", "n": 5553, "churn_rate": 37.9}], "NEW HIRE": [{"bin": "-50", "n": 90000, "churn_rate": 71.3}, {"bin": "0", "n": 98000, "churn_rate": 72.1}, {"bin": "50", "n": 14305, "churn_rate": 72.8}], "TENURED": [{"bin": "-50", "n": 25000, "churn_rate": 39.4}, {"bin": "0", "n": 28000, "churn_rate": 40.2}, {"bin": "50", "n": 4811, "churn_rate": 40.8}], "VETERAN": [{"bin": "-50", "n": 19000, "churn_rate": 49.8}, {"bin": "0", "n": 22000, "churn_rate": 50.6}, {"bin": "50", "n": 4850, "churn_rate": 51.5}]}};
+
+const COLORS = {NEWBIE:'#2563EB','NEW HIRE':'#D97706',TENURED:'#059669',VETERAN:'#DC2626'};
+const CAREERS = ['NEWBIE','NEW HIRE','TENURED','VETERAN'];
+const CLASS_MAP = {NEWBIE:'newbie','NEW HIRE':'newhire',TENURED:'tenured',VETERAN:'veteran'};
+
+function pFmt(p) {
+  if (p < 1e-100) return '< 1e-100';
+  if (p < 0.0001) return p.toExponential(2);
+  return p.toFixed(4);
+}
+function sigClass(p, r) {
+  if (r < 0) return 'neg';
+  return p < 0.05 ? 'sig' : 'nosig';
+}
+function sigLabel(p, r) {
+  if (r < 0) return '▼ Negativo';
+  return p < 0.05 ? '✓ Significativo' : '~ Marginal';
+}
+
+// ---- TILES ----
+function buildTiles(metricKey, containerId) {
+  const rows = DATA.filter(d => d.metric === metricKey);
+  const cont = document.getElementById(containerId);
+  cont.innerHTML = '';
+  rows.forEach(d => {
+    const cls = CLASS_MAP[d.career];
+    const sc = sigClass(d.pearson_p, d.pearson_r);
+    const scs = sigClass(d.spearman_p, d.spearman_r);
+    cont.innerHTML += `
+    <div class="tile ${cls}">
+      <div class="tile-career">${d.career}</div>
+      <div class="tile-row">
+        <span class="tile-label">Pearson r</span>
+        <span class="tile-val ${sc}">${d.pearson_r > 0 ? '+' : ''}${d.pearson_r}</span>
+      </div>
+      <div class="tile-row">
+        <span class="tile-label">Spearman r</span>
+        <span class="tile-val ${scs}">${d.spearman_r > 0 ? '+' : ''}${d.spearman_r}</span>
+      </div>
+      <div class="tile-row" style="margin-top:8px">
+        <span class="tile-label">Δ Médio</span>
+        <span class="tile-val" style="font-size:14px">${d.delta > 0 ? '+' : ''}${d.delta}pp</span>
+      </div>
+      <div class="tile-sub">n = ${d.n.toLocaleString('pt-BR')} · p = ${pFmt(d.pearson_p)}</div>
+    </div>`;
+  });
+}
+
+// ---- LINE CHARTS ----
+function buildLineCharts(metricKey, containerId) {
+  const cont = document.getElementById(containerId);
+  cont.innerHTML = '';
+  const rows = DATA.filter(d => d.metric === metricKey);
+  CAREERS.forEach(career => {
+    const d = rows.find(r => r.career === career);
+    const binsArr = BINS[metricKey][career] || [];
+    if (!binsArr.length) return;
+    const color = COLORS[career];
+    const W = 340, H = 160, PL = 44, PR = 12, PT = 10, PB = 30;
+    const xMin = +binsArr[0].bin, xMax = +binsArr[binsArr.length-1].bin + 50;
+    const yVals = binsArr.map(b => b.churn_rate);
+    const yMin = Math.max(0, Math.min(...yVals) - 5);
+    const yMax = Math.min(100, Math.max(...yVals) + 5);
+    const xS = v => PL + (v - xMin) / (xMax - xMin) * (W - PL - PR);
+    const yS = v => PT + (1 - (v - yMin)/(yMax - yMin)) * (H - PT - PB);
+    const pts = binsArr.map(b => `${xS(+b.bin+25)},${yS(b.churn_rate)}`).join(' ');
+    // trend line (linear regression)
+    const xs = binsArr.map(b => +b.bin+25), ys = binsArr.map(b => b.churn_rate);
+    const n = xs.length, mx = xs.reduce((a,v)=>a+v,0)/n, my = ys.reduce((a,v)=>a+v,0)/n;
+    const slope = xs.reduce((a,v,i)=>a+(v-mx)*(ys[i]-my),0)/xs.reduce((a,v)=>a+(v-mx)**2,0);
+    const intercept = my - slope * mx;
+    const tx1 = xs[0], ty1 = intercept + slope*tx1;
+    const tx2 = xs[n-1], ty2 = intercept + slope*tx2;
+    const sc = sigClass(d.pearson_p, d.pearson_r);
+    const scLabel = sigLabel(d.pearson_p, d.pearson_r);
+
+    const box = document.createElement('div');
+    box.className = 'chart-box';
+    box.innerHTML = `
+      <div class="chart-career" style="color:${color}">${career}</div>
+      <div class="chart-meta">Pearson r = <span class="${sc}">${d.pearson_r>0?'+':''}${d.pearson_r}</span> · Spearman r = <span class="${sigClass(d.spearman_p,d.spearman_r)}">${d.spearman_r>0?'+':''}${d.spearman_r}</span> · ${scLabel}</div>
+      <svg width="${W}" height="${H}">
+        <!-- grid -->
+        ${[0,25,50,75,100].filter(v=>v>=yMin&&v<=yMax).map(v=>`
+          <line x1="${PL}" y1="${yS(v)}" x2="${W-PR}" y2="${yS(v)}" stroke="#334155" stroke-width="1"/>
+          <text x="${PL-4}" y="${yS(v)+4}" text-anchor="end" fill="#64748b" font-size="9">${v}%</text>
+        `).join('')}
+        <!-- x axis labels -->
+        ${binsArr.filter((_,i)=>i%2===0).map(b=>`<text x="${xS(+b.bin+25)}" y="${H-6}" text-anchor="middle" fill="#64748b" font-size="9">${b.bin}</text>`).join('')}
+        <!-- trend -->
+        <line x1="${xS(tx1)}" y1="${yS(Math.max(yMin,Math.min(yMax,ty1)))}" x2="${xS(tx2)}" y2="${yS(Math.max(yMin,Math.min(yMax,ty2)))}" stroke="${color}" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.6"/>
+        <!-- line -->
+        <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>
+        <!-- dots -->
+        ${binsArr.map(b=>`<circle cx="${xS(+b.bin+25)}" cy="${yS(b.churn_rate)}" r="4" fill="${color}" stroke="#1e293b" stroke-width="2" class="dot" data-tip="Faixa ${b.bin}pp | n=${b.n.toLocaleString('pt-BR')} | Churn: ${b.churn_rate}%"/>`).join('')}
+      </svg>`;
+    cont.appendChild(box);
+  });
+  attachDotTooltips();
+}
+
+// ---- BAR CARDS ----
+function buildBars(metricKey, containerId) {
+  const cont = document.getElementById(containerId);
+  cont.innerHTML = '';
+  const rows = DATA.filter(d => d.metric === metricKey);
+  CAREERS.forEach(career => {
+    const d = rows.find(r => r.career === career);
+    const color = COLORS[career];
+    const maxV = Math.max(d.mean_churn, d.mean_active) * 1.15;
+    const barW = 180;
+    const bChurn  = d.mean_churn  / maxV * barW;
+    const bActive = d.mean_active / maxV * barW;
+    const cls = CLASS_MAP[career];
+    cont.innerHTML += `
+    <div class="bar-card">
+      <div class="bar-card-title" style="color:${color}">${career}</div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Churned (n=${d.n_churn.toLocaleString('pt-BR')})</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:${bChurn}px;height:14px;background:${color};border-radius:3px;opacity:0.9"></div>
+          <span style="font-size:13px;font-weight:700;color:var(--red)">${d.mean_churn}</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Ativo (n=${d.n_active.toLocaleString('pt-BR')})</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:${bActive}px;height:14px;background:${color};border-radius:3px;opacity:0.4"></div>
+          <span style="font-size:13px;font-weight:700;color:var(--green)">${d.mean_active}</span>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--muted)">Δ = <strong style="color:${d.delta>=0?'var(--red)':'var(--green)'}">${d.delta>0?'+':''}${d.delta}pp</strong></div>
+    </div>`;
+  });
+}
+
+// ---- COMPARE CHART ----
+function buildCompare() {
+  const cont = document.getElementById('compare-chart');
+  const W = 780, H = 300, PL = 100, PR = 20, PT = 40, PB = 50;
+  const metrics = ['ORH_DEV','STOPS_DEV'];
+  const mLabels = {'ORH_DEV':'ORH','STOPS_DEV':'Paradas'};
+  const corrTypes = ['pearson_r','spearman_r'];
+  const corrLabels = {'pearson_r':'Pearson','spearman_r':'Spearman'};
+  // group data: for each career, get both metric x both corr
+  const maxR = 0.12;
+  const minR = -0.14;
+  const groups = CAREERS;
+  const nGroups = groups.length;
+  const barsPerGroup = 4; // orh_pearson, orh_spearman, stops_pearson, stops_spearman
+  const barW = 18, groupGap = 20;
+  const totalW = W - PL - PR;
+  const groupW = totalW / nGroups;
+  const yS = v => PT + (1 - (v - minR)/(maxR - minR)) * (H - PT - PB);
+  const zero = yS(0);
+
+  let svgBars = '';
+  groups.forEach((career, gi) => {
+    const gx = PL + gi * groupW + groupGap/2;
+    const barConfigs = [
+      {metric:'ORH_DEV', corr:'pearson_r', color:COLORS[career], opacity:1, label:'ORH P'},
+      {metric:'ORH_DEV', corr:'spearman_r', color:COLORS[career], opacity:0.55, label:'ORH S'},
+      {metric:'STOPS_DEV', corr:'pearson_r', color:'#94a3b8', opacity:1, label:'STP P'},
+      {metric:'STOPS_DEV', corr:'spearman_r', color:'#94a3b8', opacity:0.55, label:'STP S'},
+    ];
+    barConfigs.forEach((bc, bi) => {
+      const d = DATA.find(r => r.career === career && r.metric === bc.metric);
+      const r = d[bc.corr];
+      const x = gx + bi * (barW + 3);
+      const y1 = r >= 0 ? yS(r) : zero;
+      const y2 = r >= 0 ? zero : yS(r);
+      const h = Math.abs(yS(r) - zero);
+      const fillColor = r < 0 ? '#ef4444' : bc.color;
+      svgBars += `<rect x="${x}" y="${y1}" width="${barW}" height="${Math.max(h,2)}" fill="${fillColor}" opacity="${bc.opacity}" rx="2"
+        class="dot" data-tip="${career} · ${mLabels[bc.metric]} · ${corrLabels[bc.corr]}: r = ${r>0?'+':''}${r}"/>`;
+      // mini label
+      svgBars += `<text x="${x+barW/2}" y="${r>=0?yS(r)-4:zero+h+12}" text-anchor="middle" font-size="8" fill="#64748b">${bc.label}</text>`;
+    });
+    // career label
+    svgBars += `<text x="${gx + (barsPerGroup*(barW+3))/2}" y="${H-10}" text-anchor="middle" font-size="11" font-weight="700" fill="${COLORS[career]}">${career}</text>`;
+  });
+
+  // grid lines
+  let grid = '';
+  [-0.12,-0.08,-0.04,0,0.04,0.08,0.12].forEach(v => {
+    grid += `<line x1="${PL}" y1="${yS(v)}" x2="${W-PR}" y2="${yS(v)}" stroke="#334155" stroke-width="${v===0?1.5:1}" stroke-dasharray="${v===0?'none':'3,3'}"/>
+             <text x="${PL-4}" y="${yS(v)+4}" text-anchor="end" fill="#64748b" font-size="9">${v.toFixed(2)}</text>`;
+  });
+
+  // legend
+  const legend = `
+    <rect x="${PL}" y="4" width="12" height="12" fill="#94a3b8" rx="2"/><text x="${PL+16}" y="14" fill="#94a3b8" font-size="10">Paradas (Pearson / Spearman)</text>
+    <rect x="${PL+170}" y="4" width="12" height="12" fill="#64748b" rx="2" opacity="0.5"/><text x="${PL+186}" y="14" fill="#94a3b8" font-size="10">ORH (cor da carreira · claro = Spearman)</text>
+  `;
+
+  cont.innerHTML = `<svg width="${W}" height="${H}">${grid}${svgBars}${legend}</svg>`;
+  attachDotTooltips();
+}
+
+// ---- FULL TABLE ----
+function buildTable() {
+  const t = document.getElementById('full-table');
+  t.innerHTML = `<thead><tr>
+    <th>Carreira</th><th>Métrica</th><th>n</th><th>n Churn</th>
+    <th>Pearson r</th><th>p Pearson</th>
+    <th>Spearman r</th><th>p Spearman</th>
+    <th>Média Churn</th><th>Média Ativo</th><th>Δ (pp)</th><th>Sinal</th>
+  </tr></thead><tbody>`;
+  DATA.forEach(d => {
+    const sc = sigClass(d.pearson_p, d.pearson_r);
+    const pillClass = d.pearson_r < 0 ? 'pill-red' : (d.pearson_p < 0.05 ? 'pill-green' : 'pill-yellow');
+    const pillLabel = d.pearson_r < 0 ? 'Negativo' : (d.pearson_p < 0.05 ? 'Sig.' : 'Marginal');
+    t.innerHTML += `<tr>
+      <td style="color:${COLORS[d.career]};font-weight:700">${d.career}</td>
+      <td>${d.metric_label}</td>
+      <td>${d.n.toLocaleString('pt-BR')}</td>
+      <td>${d.n_churn.toLocaleString('pt-BR')}</td>
+      <td class="${sc}">${d.pearson_r>0?'+':''}${d.pearson_r}</td>
+      <td>${pFmt(d.pearson_p)}</td>
+      <td class="${sigClass(d.spearman_p,d.spearman_r)}">${d.spearman_r>0?'+':''}${d.spearman_r}</td>
+      <td>${pFmt(d.spearman_p)}</td>
+      <td>${d.mean_churn}</td>
+      <td>${d.mean_active}</td>
+      <td style="color:${d.delta>=0?'var(--red)':'var(--green)'}">${d.delta>0?'+':''}${d.delta}</td>
+      <td><span class="pill ${pillClass}">${pillLabel}</span></td>
+    </tr>`;
+  });
+  t.innerHTML += '</tbody>';
+}
+
+// ---- TOOLTIP ----
+function attachDotTooltips() {
+  const tt = document.getElementById('tooltip');
+  document.querySelectorAll('.dot').forEach(el => {
+    el.style.cursor = 'pointer';
+    el.addEventListener('mouseenter', e => {
+      tt.textContent = el.dataset.tip;
+      tt.style.display = 'block';
+    });
+    el.addEventListener('mousemove', e => {
+      tt.style.left = (e.clientX + 14) + 'px';
+      tt.style.top  = (e.clientY - 10) + 'px';
+    });
+    el.addEventListener('mouseleave', () => { tt.style.display = 'none'; });
+  });
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  const idx = {orh:0,stops:1,compare:2,table:3}[name];
+  document.querySelectorAll('.tab')[idx].classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// INIT
+buildTiles('ORH_DEV','tiles-orh');
+buildTiles('STOPS_DEV','tiles-stops');
+buildLineCharts('ORH_DEV','charts-orh');
+buildLineCharts('STOPS_DEV','charts-stops');
+buildBars('ORH_DEV','bars-orh');
+buildBars('STOPS_DEV','bars-stops');
+buildCompare();
+buildTable();
+</script>
+</body>
+</html>
