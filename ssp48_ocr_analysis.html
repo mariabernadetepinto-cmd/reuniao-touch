@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSP48 — Análise OCR (go-live 28/04/2026)</title>
+<style>
+  :root {
+    --surface-1: #fcfcfb;
+    --surface-page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --gridline: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --s1: #2a78d6;
+    --s2: #1baf7a;
+    --s3: #eda100;
+    --s4: #008300;
+    --s5: #4a3aa7;
+    --s6: #e34948;
+    --good: #006300;
+    --warn: #b87f00;
+    --critical: #d03b3b;
+    --badge-pre: #e8f0fb;
+    --badge-pre-text: #1a4d99;
+    --badge-post: #e6f7f0;
+    --badge-post-text: #0a5c3a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-1: #1a1a19;
+      --surface-page: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted: #898781;
+      --gridline: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+      --s1: #3987e5;
+      --s2: #199e70;
+      --s3: #c98500;
+      --s4: #008300;
+      --s5: #9085e9;
+      --s6: #e66767;
+      --good: #0ca30c;
+      --warn: #fab219;
+      --critical: #e34948;
+      --badge-pre: #1a2a40;
+      --badge-pre-text: #7ab0f5;
+      --badge-post: #0d2e1f;
+      --badge-post-text: #4dca96;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--surface-page);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+
+  /* Header */
+  .page-header {
+    border-bottom: 1px solid var(--gridline);
+    padding-bottom: 20px;
+    margin-bottom: 32px;
+  }
+  .page-header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+  .page-header .sub { color: var(--text-secondary); margin-top: 4px; font-size: 13px; }
+  .ocr-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 10px;
+    background: #fef3e2; color: #7a4a00;
+    border: 1px solid #f5c97a; border-radius: 6px;
+    padding: 4px 10px; font-size: 12px; font-weight: 600;
+  }
+  @media (prefers-color-scheme: dark) {
+    .ocr-badge { background: #2a1f00; color: #f5c97a; border-color: #5a4000; }
+  }
+
+  /* Section */
+  .section { margin-bottom: 40px; }
+  .section-title {
+    font-size: 15px; font-weight: 700; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-num {
+    background: var(--s1); color: #fff;
+    border-radius: 50%; width: 22px; height: 22px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex-shrink: 0;
+  }
+  .section-desc { color: var(--text-secondary); font-size: 12px; margin-bottom: 16px; margin-left: 30px; }
+
+  /* Stat tiles */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-tile {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .stat-tile .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .stat-tile .pre { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
+  .stat-tile .post { font-size: 22px; font-weight: 700; line-height: 1.1; }
+  .stat-tile .delta { font-size: 12px; margin-top: 4px; font-weight: 600; }
+  .delta.good { color: var(--good); }
+  .delta.warn { color: var(--warn); }
+  .delta.bad  { color: var(--critical); }
+
+  /* Period badges */
+  .badge-pre  { display: inline-block; background: var(--badge-pre);  color: var(--badge-pre-text);  border-radius: 4px; padding: 2px 7px; font-size: 11px; font-weight: 600; }
+  .badge-post { display: inline-block; background: var(--badge-post); color: var(--badge-post-text); border-radius: 4px; padding: 2px 7px; font-size: 11px; font-weight: 600; }
+
+  /* Chart containers */
+  .chart-wrap {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 20px 16px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 14px; color: var(--text-primary); }
+  .chart-sub   { font-size: 11px; color: var(--text-muted); margin-top: -10px; margin-bottom: 14px; }
+
+  svg.chart { width: 100%; overflow: visible; }
+
+  /* Legend */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 16px;
+    margin-top: 10px; font-size: 12px; color: var(--text-secondary);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-rect { width: 12px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* Table */
+  .tbl-wrap { overflow-x: auto; margin-top: 12px; }
+  table {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+    background: var(--surface-1);
+  }
+  th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--gridline); }
+  th { font-weight: 600; color: var(--text-secondary); text-align: right; background: var(--surface-1); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+  th:first-child, td:first-child { text-align: left; }
+  th:nth-child(2), td:nth-child(2) { text-align: left; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(42,120,214,0.04); }
+  .period-pre  { color: var(--badge-pre-text);  font-weight: 600; }
+  .period-post { color: var(--badge-post-text); font-weight: 600; }
+  .val-bad { color: var(--critical); font-weight: 600; }
+  .val-good { color: var(--good); font-weight: 600; }
+  .val-warn { color: var(--warn); font-weight: 600; }
+
+  /* Tooltip */
+  #tooltip {
+    position: fixed; pointer-events: none;
+    background: var(--text-primary); color: var(--surface-1);
+    border-radius: 6px; padding: 8px 12px; font-size: 12px;
+    line-height: 1.6; z-index: 999; max-width: 220px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    display: none;
+  }
+
+  /* Grid layout */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* Insight callout */
+  .insight {
+    border-left: 3px solid var(--s1);
+    padding: 10px 14px;
+    background: var(--surface-1);
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .insight strong { color: var(--text-primary); }
+
+  /* Divider */
+  hr { border: none; border-top: 1px solid var(--gridline); margin: 32px 0; }
+</style>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <h1>SSP48 — Análise de Impacto: One Click Routing (OCR)</h1>
+    <p class="sub">Facility: SSP48 &nbsp;|&nbsp; Site: MLB &nbsp;|&nbsp; Período: Fev–Jun 2026</p>
+    <span class="ocr-badge">⚡ OCR go-live: 28/04/2026</span>
+  </div>
+
+  <!-- ────────────────────────────────────────────────────────── -->
+  <!-- SECTION 1: CHURN RATE OFICIAL -->
+  <!-- ────────────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title"><span class="section-num">1</span>Churn Rate Oficial — DM RFL Pipeline</div>
+    <div class="section-desc">Fonte: DM_DRIVERS_RFL_CHURN_BY_SVC_MONTHLY &nbsp;|&nbsp; Pré-OCR: fev–abr &nbsp;|&nbsp; Pós-OCR: mai–jun</div>
+
+    <div class="insight">
+      <strong>Extra:</strong> churn caiu de 49% (abr, spike pré go-live) para <strong>25.9% em jun</strong> — menor nível do período. &nbsp;
+      <strong>MLP:</strong> estável em torno de 24–28%. OCR não causou aumento de churn.
+    </div>
+
+    <!-- Stat tiles -->
+    <div class="stat-row">
+      <div class="stat-tile">
+        <div class="label">Extra — Pré-OCR avg</div>
+        <div class="pre">fev–mar (excl. spike abr)</div>
+        <div class="post">29.2%</div>
+        <div class="delta">churn rate</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">Extra — Pós-OCR jun</div>
+        <div class="pre">primeiro mês completo</div>
+        <div class="post" style="color:var(--good)">25.9%</div>
+        <div class="delta good">▼ −3.3pp vs pré</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">MLP — Pré-OCR avg</div>
+        <div class="pre">fev–abr</div>
+        <div class="post">24.2%</div>
+        <div class="delta">churn rate</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">MLP — Pós-OCR jun</div>
+        <div class="pre">primeiro mês completo</div>
+        <div class="post" style="color:var(--warn)">27.8%</div>
+        <div class="delta warn">▲ +3.6pp vs pré</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">Spike abr/26</div>
+        <div class="pre">Extra — último dia pre OCR</div>
+        <div class="post" style="color:var(--critical)">49.0%</div>
+        <div class="delta bad">⚠ pré go-live (28/04)</div>
+      </div>
+    </div>
+
+    <!-- Churn rate chart -->
+    <div class="chart-wrap">
+      <div class="chart-title">Churn Rate Mensal — SSP48</div>
+      <div class="chart-sub">Linha vertical tracejada = go-live OCR (28/04/2026)</div>
+      <svg class="chart" id="churnLine" viewBox="0 0 820 240"></svg>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--s1)"></div><span>Extra</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--s2)"></div><span>MLP</span></div>
+      </div>
+    </div>
+
+    <!-- Churn decomposition table -->
+    <div class="chart-wrap">
+      <div class="chart-title">Decomposição do Churn por Motivo</div>
+      <div class="tbl-wrap">
+        <table id="churnTable">
+          <thead>
+            <tr>
+              <th>Mês</th><th>Tipo</th>
+              <th>Pool</th><th>Churned</th><th>Churn %</th>
+              <th>Voluntário</th><th>Vol. saiu Meli</th>
+              <th>Bloqueio Meli</th><th>BGC</th><th>Outros</th><th>Bloqueio MLP</th>
+            </tr>
+          </thead>
+          <tbody id="churnTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ────────────────────────────────────────────────────────── -->
+  <!-- SECTION 2: PARADAS POR MODAL -->
+  <!-- ────────────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title"><span class="section-num">2</span>Paradas por Modal — Pré vs Pós OCR</div>
+    <div class="section-desc">Fonte: DM_SHP_ROUTES_LAST_MILE, ±60 dias do go-live &nbsp;|&nbsp; mín 20 rotas/grupo</div>
+
+    <div class="insight">
+      <strong>WALKER</strong> é o modal mais impactado: +55.6 paradas (81→137 avg) pós-OCR com desvio ORH de +10.5h.
+      <strong>VAN e VUC</strong> aumentaram ~7 paradas. <strong>PASSEIO Logistics</strong> reduziu stops (51→48).
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Avg Stops por Modal &amp; Modelo — Pré vs Pós OCR</div>
+      <svg class="chart" id="stopsBar" viewBox="0 0 820 320"></svg>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-rect" style="background:var(--s1)"></div><span>Pré-OCR</span></div>
+        <div class="legend-item"><div class="legend-rect" style="background:var(--s2)"></div><span>Pós-OCR</span></div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">ORH Desvio (Real − Planejado) por Modal — Pré vs Pós OCR</div>
+      <div class="chart-sub">Valores positivos = rota levou mais tempo do que planejado</div>
+      <svg class="chart" id="orhBar" viewBox="0 0 820 320"></svg>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-rect" style="background:var(--s1); opacity:0.6"></div><span>Pré-OCR</span></div>
+        <div class="legend-item"><div class="legend-rect" style="background:var(--s2)"></div><span>Pós-OCR</span></div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Tabela: Paradas e Desvios por Modal</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Modal</th><th>Modelo</th><th>Período</th><th>Rotas</th>
+              <th>Avg Stops</th><th>Med Stops</th>
+              <th>ORH Real</th><th>ORH Plan</th><th>ORH Dev</th>
+              <th>OZH Dev</th><th>Stem Out Dev</th>
+            </tr>
+          </thead>
+          <tbody id="modalTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ────────────────────────────────────────────────────────── -->
+  <!-- SECTION 3: COMPONENTES DO ORH -->
+  <!-- ────────────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title"><span class="section-num">3</span>Componentes do ORH — Stem Out vs OZH vs Stem In</div>
+    <div class="section-desc">ORH = STEM_OUT + OZH + STEM_IN &nbsp;|&nbsp; ±30 dias do go-live</div>
+
+    <div class="insight">
+      <strong>STEM OUT</strong> é o componente com maior desvio: real ~70 min vs planejado ~13 min (<strong>+57 min de gap</strong>).
+      <strong>OZH</strong> está overplanejado (real &lt; plano). Pós-OCR o STEM IN aumentou +0.26h.
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-tile">
+        <div class="label">Stem Out — Desvio Pré</div>
+        <div class="pre">real 68.3 min | plan 12.7 min</div>
+        <div class="post" style="color:var(--critical)">+55.6 min</div>
+        <div class="delta bad">subestimado 5.4×</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">Stem Out — Desvio Pós</div>
+        <div class="pre">real 72.7 min | plan 13.8 min</div>
+        <div class="post" style="color:var(--critical)">+58.8 min</div>
+        <div class="delta bad">▲ +3.2 min pós OCR</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">OZH — Desvio Pré</div>
+        <div class="pre">real 4.18h | plan 4.87h</div>
+        <div class="post" style="color:var(--good)">−0.69h</div>
+        <div class="delta good">overplanejado</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">OZH — Desvio Pós</div>
+        <div class="pre">real 4.10h | plan 4.45h</div>
+        <div class="post" style="color:var(--good)">−0.36h</div>
+        <div class="delta good">melhorou pós OCR</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">Stem In — Real Pré</div>
+        <div class="pre">sem planejado</div>
+        <div class="post">0.91h</div>
+        <div class="delta">54.6 min</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">Stem In — Real Pós</div>
+        <div class="pre">sem planejado</div>
+        <div class="post" style="color:var(--warn)">1.17h</div>
+        <div class="delta warn">▲ +0.26h pós OCR</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="chart-wrap">
+        <div class="chart-title">Stem Out: Real vs Planejado (minutos)</div>
+        <svg class="chart" id="stemOutBar" viewBox="0 0 380 220"></svg>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-rect" style="background:var(--s6)"></div><span>Real</span></div>
+          <div class="legend-item"><div class="legend-rect" style="background:var(--s1)"></div><span>Planejado</span></div>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-title">OZH: Real vs Planejado (horas)</div>
+        <svg class="chart" id="ozhBar" viewBox="0 0 380 220"></svg>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-rect" style="background:var(--s6)"></div><span>Real</span></div>
+          <div class="legend-item"><div class="legend-rect" style="background:var(--s1)"></div><span>Planejado</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Comparativo: Desvio dos Componentes do ORH</div>
+      <div class="chart-sub">Pré-OCR vs Pós-OCR — valores negativos = overplanejado; positivos = underplanejado</div>
+      <svg class="chart" id="componentsBar" viewBox="0 0 820 240"></svg>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-rect" style="background:var(--s1); opacity:0.6"></div><span>Pré-OCR</span></div>
+        <div class="legend-item"><div class="legend-rect" style="background:var(--s2)"></div><span>Pós-OCR</span></div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ────────────────────────────────────────────────────────── -->
+  <!-- SECTION 4: CHURN vs RETIDOS — KPIs DE ROTA -->
+  <!-- ────────────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title"><span class="section-num">4</span>Churn vs Retidos — KPIs de Rota (M-1)</div>
+    <div class="section-desc">Join RFL × DM_SHP_ROUTES via rotas do mês anterior ao churn (sem filtro SVC_PRIMARY)</div>
+
+    <div class="insight">
+      Drivers que churnam apresentam <strong>ORH desvio 3–4× maior</strong> que retidos — padrão consistente em todos os meses.
+      Diferença principal vem do <strong>OZH</strong> (horas produtivas), não do Stem Out.
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">ORH Desvio Médio: CHURN vs RETIDO por Mês e Company Type</div>
+      <svg class="chart" id="churnKpiBar" viewBox="0 0 820 300"></svg>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-rect" style="background:var(--s6)"></div><span>CHURN</span></div>
+        <div class="legend-item"><div class="legend-rect" style="background:var(--s1)"></div><span>RETAINED</span></div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Tabela: KPIs dos Churners vs Retidos por Mês (SSP48)</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Mês Ref.</th><th>Tipo</th><th>Status</th>
+              <th>Motoristas</th><th>Rotas SSP48</th><th>Avg Stops</th>
+              <th>ORH Real</th><th>ORH Plan</th><th>ORH Dev</th>
+              <th>OZH Dev</th><th>Stem Out Dev</th>
+            </tr>
+          </thead>
+          <tbody id="churnKpiTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- .page -->
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+
+const churnData = [
+  {mes:"Fev/26",tipo:"Extra",pool:479,churned:144,pct:30.06,vol:14.41,volMeli:9.19,bloqMeli:3.55,bgc:1.04,outros:1.04,bloqMlp:0.00},
+  {mes:"Fev/26",tipo:"MLP",  pool:396,churned:89, pct:22.47,vol:20.45,volMeli:16.16,bloqMeli:0.00,bgc:0.00,outros:0.00,bloqMlp:2.02},
+  {mes:"Mar/26",tipo:"Extra",pool:710,churned:201,pct:28.31,vol:10.85,volMeli:7.32, bloqMeli:1.69,bgc:2.54,outros:1.27,bloqMlp:0.00},
+  {mes:"Mar/26",tipo:"MLP",  pool:447,churned:98, pct:21.92,vol:19.02,volMeli:16.11,bloqMeli:0.00,bgc:0.00,outros:0.00,bloqMlp:2.91},
+  {mes:"Abr/26",tipo:"Extra",pool:802,churned:393,pct:49.00,vol:14.21,volMeli:10.97,bloqMeli:3.12,bgc:2.37,outros:1.12,bloqMlp:0.00},
+  {mes:"Abr/26",tipo:"MLP",  pool:488,churned:138,pct:28.28,vol:22.75,volMeli:12.70,bloqMeli:0.00,bgc:0.00,outros:0.00,bloqMlp:5.53},
+  {mes:"Mai/26",tipo:"Extra",pool:686,churned:228,pct:33.24,vol:11.52,volMeli:9.33, bloqMeli:1.75,bgc:0.87,outros:0.87,bloqMlp:0.00},
+  {mes:"Mai/26",tipo:"MLP",  pool:500,churned:119,pct:23.80,vol:20.00,volMeli:16.00,bloqMeli:0.00,bgc:0.00,outros:0.00,bloqMlp:3.80},
+  {mes:"Jun/26",tipo:"Extra",pool:914,churned:237,pct:25.93,vol:9.30, volMeli:7.55, bloqMeli:1.75,bgc:0.66,outros:0.77,bloqMlp:0.00},
+  {mes:"Jun/26",tipo:"MLP",  pool:518,churned:144,pct:27.80,vol:23.55,volMeli:13.90,bloqMeli:0.00,bgc:0.00,outros:0.00,bloqMlp:4.25},
+];
+
+const modalData = [
+  {vt:"LARGE VAN",dm:"LOGISTICS",per:"POST_OCR",rotas:24, stops:57.0, med:54.0, orh:7.142,plan:7.229,dev:-0.086,ozh:-2.541,stem:2.009},
+  {vt:"LARGE VAN",dm:"LOGISTICS",per:"PRE_OCR", rotas:47, stops:53.64,med:53.0, orh:6.366,plan:6.98, dev:-0.614,ozh:-2.825,stem:1.754},
+  {vt:"MOTO",     dm:"CROWD",    per:"POST_OCR",rotas:524,stops:29.04,med:30.0, orh:4.204,plan:2.584,dev:1.62,  ozh:-0.084,stem:0.506},
+  {vt:"MOTO",     dm:"CROWD",    per:"PRE_OCR", rotas:437,stops:29.16,med:32.0, orh:6.295,plan:2.903,dev:3.392, ozh:-0.172,stem:0.616},
+  {vt:"PASSEIO",  dm:"CROWD",    per:"POST_OCR",rotas:4310,stops:36.63,med:36.0,orh:6.012,plan:3.502,dev:2.51,  ozh:0.377, stem:0.687},
+  {vt:"PASSEIO",  dm:"CROWD",    per:"PRE_OCR", rotas:3601,stops:34.53,med:34.0,orh:6.003,plan:3.718,dev:2.285, ozh:0.11,  stem:0.643},
+  {vt:"PASSEIO",  dm:"LOGISTICS",per:"POST_OCR",rotas:5304,stops:47.97,med:49.0,orh:4.937,plan:4.093,dev:0.844, ozh:-0.705,stem:0.699},
+  {vt:"PASSEIO",  dm:"LOGISTICS",per:"PRE_OCR", rotas:4939,stops:51.19,med:53.0,orh:4.882,plan:4.794,dev:0.088, ozh:-1.356,stem:0.689},
+  {vt:"UTILITÁRIO",dm:"CROWD",   per:"POST_OCR",rotas:1585,stops:37.98,med:39.0,orh:5.243,plan:4.069,dev:1.173, ozh:-0.632,stem:0.861},
+  {vt:"UTILITÁRIO",dm:"CROWD",   per:"PRE_OCR", rotas:1040,stops:38.3, med:37.0,orh:5.126,plan:4.423,dev:0.703, ozh:-0.890,stem:0.900},
+  {vt:"UTILITÁRIO",dm:"LOGISTICS",per:"POST_OCR",rotas:7121,stops:50.58,med:46.0,orh:6.633,plan:4.907,dev:1.726,ozh:-0.489,stem:1.159},
+  {vt:"UTILITÁRIO",dm:"LOGISTICS",per:"PRE_OCR", rotas:6322,stops:48.55,med:46.0,orh:6.347,plan:5.285,dev:1.062,ozh:-0.840,stem:1.173},
+  {vt:"VAN",      dm:"LOGISTICS",per:"POST_OCR",rotas:1009,stops:55.77,med:58.0,orh:9.006,plan:6.482,dev:2.524, ozh:-0.349,stem:1.776},
+  {vt:"VAN",      dm:"LOGISTICS",per:"PRE_OCR", rotas:1287,stops:48.53,med:48.0,orh:8.839,plan:6.614,dev:2.225, ozh:-0.648,stem:1.933},
+  {vt:"VUC",      dm:"LOGISTICS",per:"POST_OCR",rotas:1001,stops:48.81,med:53.0,orh:9.047,plan:6.257,dev:2.79,  ozh:-0.098,stem:1.715},
+  {vt:"VUC",      dm:"LOGISTICS",per:"PRE_OCR", rotas:1229,stops:40.2, med:43.0,orh:8.249,plan:6.044,dev:2.205, ozh:-0.445,stem:1.824},
+  {vt:"WALKER",   dm:"LOGISTICS",per:"POST_OCR",rotas:176, stops:136.84,med:93.0,orh:26.651,plan:16.182,dev:10.47,ozh:-0.887,stem:2.326},
+  {vt:"WALKER",   dm:"LOGISTICS",per:"PRE_OCR", rotas:129, stops:81.19,med:77.0,orh:14.925,plan:8.790, dev:6.135,ozh:3.059, stem:0.964},
+];
+
+const orhSummary = [
+  {per:"PRE_OCR", rotas:8955,stops:48.73,medStops:46.0,orhReal:6.164,orhPlan:5.090,orhDev:1.074,medOrhDev:0.084,ozhReal:4.181,ozhPlan:4.873,ozhDev:-0.692,stemOutRealH:1.138,stemOutPlanH:0.211,stemOutDev:0.927,stemOutRealMin:68.3,stemOutPlanMin:12.7,stemOutMinDev:55.6,stemInReal:0.910},
+  {per:"POST_OCR",rotas:9999,stops:49.81,medStops:47.0,orhReal:6.324,orhPlan:4.684,orhDev:1.640,medOrhDev:0.650,ozhReal:4.095,ozhPlan:4.451,ozhDev:-0.356,stemOutRealH:1.211,stemOutPlanH:0.231,stemOutDev:0.980,stemOutRealMin:72.7,stemOutPlanMin:13.8,stemOutMinDev:58.8,stemInReal:1.172},
+];
+
+const churnKpiData = [
+  {mes:"Mar/26",tipo:"Extra",status:"CHURN",   motoristas:100,rotas:197, stops:37.77,orh:22.01,plan:3.96,dev:18.05,ozh:1.79, stem:0.82},
+  {mes:"Mar/26",tipo:"Extra",status:"RETAINED",motoristas:388,rotas:1364,stops:35.34,orh:6.05, plan:3.84,dev:2.21, ozh:-0.08,stem:0.85},
+  {mes:"Mar/26",tipo:"MLP",  status:"CHURN",   motoristas:86, rotas:499, stops:44.11,orh:6.94, plan:5.30,dev:1.65, ozh:-0.47,stem:1.37},
+  {mes:"Mar/26",tipo:"MLP",  status:"RETAINED",motoristas:298,rotas:5057,stops:48.14,orh:6.40, plan:5.33,dev:1.07, ozh:-1.00,stem:1.19},
+  {mes:"Abr/26",tipo:"Extra",status:"CHURN",   motoristas:161,rotas:411, stops:36.82,orh:18.05,plan:3.92,dev:14.12,ozh:2.52, stem:1.17},
+  {mes:"Abr/26",tipo:"Extra",status:"RETAINED",motoristas:554,rotas:2897,stops:34.15,orh:6.01, plan:3.84,dev:2.17, ozh:-0.40,stem:0.74},
+  {mes:"Abr/26",tipo:"MLP",  status:"CHURN",   motoristas:89, rotas:686, stops:44.24,orh:9.31, plan:5.83,dev:3.47, ozh:0.52, stem:1.94},
+  {mes:"Abr/26",tipo:"MLP",  status:"RETAINED",motoristas:361,rotas:6440,stops:45.44,orh:6.57, plan:5.30,dev:1.27, ozh:-0.91,stem:1.26},
+  {mes:"Mai/26",tipo:"Extra",status:"CHURN",   motoristas:100,rotas:238, stops:38.52,orh:21.03,plan:3.93,dev:17.11,ozh:8.42, stem:0.85},
+  {mes:"Mai/26",tipo:"Extra",status:"RETAINED",motoristas:419,rotas:1631,stops:36.62,orh:6.09, plan:3.84,dev:2.25, ozh:0.13, stem:0.56},
+  {mes:"Mai/26",tipo:"MLP",  status:"CHURN",   motoristas:99, rotas:629, stops:52.40,orh:9.88, plan:5.96,dev:3.91, ozh:1.26, stem:1.40},
+  {mes:"Mai/26",tipo:"MLP",  status:"RETAINED",motoristas:366,rotas:6682,stops:51.52,orh:6.81, plan:5.34,dev:1.46, ozh:-0.46,stem:1.04},
+  {mes:"Jun/26",tipo:"Extra",status:"CHURN",   motoristas:118,rotas:256, stops:40.55,orh:10.83,plan:3.73,dev:7.10, ozh:2.85, stem:0.86},
+  {mes:"Jun/26",tipo:"Extra",status:"RETAINED",motoristas:547,rotas:2310,stops:39.63,orh:5.91, plan:3.79,dev:2.12, ozh:0.22, stem:0.71},
+  {mes:"Jun/26",tipo:"MLP",  status:"CHURN",   motoristas:102,rotas:844, stops:54.70,orh:10.48,plan:5.43,dev:5.06, ozh:0.95, stem:1.38},
+  {mes:"Jun/26",tipo:"MLP",  status:"RETAINED",motoristas:371,rotas:6718,stops:52.54,orh:6.94, plan:5.13,dev:1.82, ozh:-0.37,stem:1.13},
+];
+
+// ─── HELPERS ───────────────────────────────────────────────────────────────
+
+const tt = document.getElementById('tooltip');
+
+function showTip(e, html) {
+  tt.innerHTML = html;
+  tt.style.display = 'block';
+  moveTip(e);
+}
+function moveTip(e) {
+  let x = e.clientX + 14, y = e.clientY - 10;
+  if (x + 230 > window.innerWidth) x = e.clientX - 230;
+  tt.style.left = x + 'px'; tt.style.top = y + 'px';
+}
+function hideTip() { tt.style.display = 'none'; }
+
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function svgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+
+// ─── FILL TABLES ───────────────────────────────────────────────────────────
+
+// Churn table
+const ct = document.getElementById('churnTbody');
+churnData.forEach(d => {
+  const isPre = ['Fev/26','Mar/26','Abr/26'].includes(d.mes);
+  const isSpike = d.mes === 'Abr/26' && d.tipo === 'Extra';
+  const pctClass = isSpike ? 'val-bad' : (isPre ? '' : (d.pct < 30 ? 'val-good' : 'val-warn'));
+  ct.innerHTML += `<tr>
+    <td><span class="badge-${isPre?'pre':'post'}">${d.mes}</span></td>
+    <td>${d.tipo}</td>
+    <td>${d.pool.toLocaleString()}</td>
+    <td>${d.churned.toLocaleString()}</td>
+    <td class="${pctClass}">${d.pct.toFixed(1)}%</td>
+    <td>${d.vol.toFixed(1)}%</td>
+    <td>${d.volMeli.toFixed(1)}%</td>
+    <td>${d.bloqMeli.toFixed(1)}%</td>
+    <td>${d.bgc.toFixed(1)}%</td>
+    <td>${d.outros.toFixed(1)}%</td>
+    <td>${d.bloqMlp.toFixed(1)}%</td>
+  </tr>`;
+});
+
+// Modal table
+const mt = document.getElementById('modalTbody');
+modalData.forEach(d => {
+  const cls = d.per === 'PRE_OCR' ? 'period-pre' : 'period-post';
+  const devCls = d.dev > 3 ? 'val-bad' : (d.dev > 1.5 ? 'val-warn' : (d.dev < 0 ? 'val-good' : ''));
+  mt.innerHTML += `<tr>
+    <td>${d.vt}</td><td>${d.dm}</td>
+    <td class="${cls}">${d.per === 'PRE_OCR' ? 'Pré-OCR' : 'Pós-OCR'}</td>
+    <td>${d.rotas.toLocaleString()}</td>
+    <td>${d.stops.toFixed(1)}</td><td>${d.med.toFixed(0)}</td>
+    <td>${d.orh.toFixed(2)}h</td><td>${d.plan.toFixed(2)}h</td>
+    <td class="${devCls}">${d.dev > 0 ? '+' : ''}${d.dev.toFixed(2)}h</td>
+    <td>${d.ozh > 0 ? '+' : ''}${d.ozh.toFixed(2)}h</td>
+    <td>${d.stem > 0 ? '+' : ''}${d.stem.toFixed(2)}h</td>
+  </tr>`;
+});
+
+// Churn KPI table
+const ck = document.getElementById('churnKpiTbody');
+churnKpiData.forEach(d => {
+  const isPre = ['Mar/26','Abr/26'].includes(d.mes);
+  const isCh = d.status === 'CHURN';
+  const devCls = isCh ? (d.dev > 5 ? 'val-bad' : 'val-warn') : '';
+  ck.innerHTML += `<tr>
+    <td><span class="badge-${isPre?'pre':'post'}">${d.mes}</span></td>
+    <td>${d.tipo}</td>
+    <td>${isCh ? '<span style="color:var(--critical);font-weight:700">CHURN</span>' : 'RETIDO'}</td>
+    <td>${d.motoristas}</td><td>${d.rotas.toLocaleString()}</td>
+    <td>${d.stops.toFixed(1)}</td>
+    <td>${d.orh.toFixed(2)}h</td><td>${d.plan.toFixed(2)}h</td>
+    <td class="${devCls}">${d.dev > 0 ? '+' : ''}${d.dev.toFixed(2)}h</td>
+    <td>${d.ozh > 0 ? '+' : ''}${d.ozh.toFixed(2)}h</td>
+    <td>${d.stem > 0 ? '+' : ''}${d.stem.toFixed(2)}h</td>
+  </tr>`;
+});
+
+// ─── CHART: CHURN LINE ─────────────────────────────────────────────────────
+
+(function() {
+  const svg = document.getElementById('churnLine');
+  const W=820, H=240, pad={t:20,r:20,b:40,l:50};
+  const cw = W-pad.l-pad.r, ch = H-pad.t-pad.b;
+
+  const meses = ['Fev/26','Mar/26','Abr/26','Mai/26','Jun/26'];
+  const extras = [30.06, 28.31, 49.00, 33.24, 25.93];
+  const mlps   = [22.47, 21.92, 28.28, 23.80, 27.80];
+  const maxY = 55, minY = 0;
+  const xScale = i => pad.l + (i / (meses.length-1)) * cw;
+  const yScale = v => pad.t + ch - (v - minY)/(maxY - minY)*ch;
+
+  // gridlines
+  [0,10,20,30,40,50].forEach(v => {
+    const y = yScale(v);
+    svg.appendChild(svgEl('line',{x1:pad.l,y1:y,x2:pad.l+cw,y2:y,stroke:'var(--gridline)',strokeWidth:1}));
+    svg.appendChild(svgEl('text',{x:pad.l-6,y:y+4,textAnchor:'end','font-size':'11','fill':'var(--text-muted)'})).textContent = v+'%';
+  });
+
+  // OCR line at index 2.93 (28/04 is ~93% through abr-to-mai gap)
+  const ocrX = pad.l + (2.93/(meses.length-1))*cw;
+  const ocrLine = svgEl('line',{x1:ocrX,y1:pad.t,x2:ocrX,y2:pad.t+ch,stroke:'var(--s3)',strokeWidth:1.5,strokeDasharray:'4 3'});
+  svg.appendChild(ocrLine);
+  const ocrLbl = svgEl('text',{x:ocrX+4,y:pad.t+12,'font-size':'10','fill':'var(--s3)','font-weight':'600'});
+  ocrLbl.textContent = 'OCR 28/04'; svg.appendChild(ocrLbl);
+
+  // x axis
+  meses.forEach((m,i) => {
+    const x = xScale(i);
+    svg.appendChild(svgEl('line',{x1:x,y1:pad.t+ch,x2:x,y2:pad.t+ch+4,stroke:'var(--baseline)',strokeWidth:1}));
+    const lbl = svgEl('text',{x,y:pad.t+ch+16,textAnchor:'middle','font-size':'11','fill':'var(--text-muted)'});
+    const isPre = i < 3;
+    lbl.textContent = m; lbl.setAttribute('fill', isPre ? 'var(--badge-pre-text)' : 'var(--badge-post-text)');
+    svg.appendChild(lbl);
+  });
+
+  function drawLine(vals, color, id) {
+    const pts = vals.map((v,i) => `${xScale(i)},${yScale(v)}`).join(' ');
+    const poly = svgEl('polyline',{points:pts,fill:'none',stroke:color,strokeWidth:2.5,strokeLinejoin:'round',strokeLinecap:'round'});
+    svg.appendChild(poly);
+    vals.forEach((v,i) => {
+      const c = svgEl('circle',{cx:xScale(i),cy:yScale(v),r:5,fill:color,stroke:'var(--surface-1)',strokeWidth:2});
+      c.style.cursor='pointer';
+      c.addEventListener('mouseenter', e => showTip(e, `<b>${meses[i]}</b> — ${id}<br>Churn: <b>${v.toFixed(1)}%</b>`));
+      c.addEventListener('mousemove', moveTip);
+      c.addEventListener('mouseleave', hideTip);
+      svg.appendChild(c);
+    });
+  }
+
+  drawLine(extras, 'var(--s1)', 'Extra');
+  drawLine(mlps, 'var(--s2)', 'MLP');
+})();
+
+// ─── CHART: STOPS BAR (grouped by modal) ──────────────────────────────────
+
+(function() {
+  const svg = document.getElementById('stopsBar');
+  const W=820, H=320, pad={t:20,r:20,b:80,l:50};
+  const cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
+
+  // Get unique modal+model combos
+  const keys = [...new Set(modalData.map(d => `${d.vt}|${d.dm}`))];
+  const pairs = keys.map(k => {
+    const [vt,dm] = k.split('|');
+    const pre  = modalData.find(d => d.vt===vt && d.dm===dm && d.per==='PRE_OCR');
+    const post = modalData.find(d => d.vt===vt && d.dm===dm && d.per==='POST_OCR');
+    return {label:`${vt}\n${dm}`, vt, dm, pre: pre?.stops||0, post: post?.stops||0};
+  });
+
+  const maxV = Math.max(...pairs.flatMap(p=>[p.pre,p.post]))*1.1;
+  const yScale = v => pad.t + ch - (v/maxV)*ch;
+  const groupW = cw / pairs.length;
+  const barW = groupW * 0.35;
+
+  [0,30,60,90,120,150].forEach(v => {
+    if (v > maxV) return;
+    const y = yScale(v);
+    svg.appendChild(svgEl('line',{x1:pad.l,y1:y,x2:pad.l+cw,y2:y,stroke:'var(--gridline)',strokeWidth:1}));
+    svg.appendChild(svgEl('text',{x:pad.l-6,y:y+4,textAnchor:'end','font-size':'10','fill':'var(--text-muted)'})).textContent = v;
+  });
+
+  pairs.forEach((p, i) => {
+    const cx = pad.l + i*groupW + groupW/2;
+    const drawBar = (val, xOff, color, label) => {
+      if (val === 0) return;
+      const bh = (val/maxV)*ch;
+      const bx = cx + xOff - barW/2;
+      const by = yScale(val);
+      const rect = svgEl('rect',{x:bx,y:by,width:barW,height:bh,fill:color,rx:3,ry:3});
+      rect.style.cursor='pointer';
+      rect.addEventListener('mouseenter', e => showTip(e, `<b>${p.vt} ${p.dm}</b><br>${label}<br>Avg stops: <b>${val.toFixed(1)}</b>`));
+      rect.addEventListener('mousemove', moveTip);
+      rect.addEventListener('mouseleave', hideTip);
+      svg.appendChild(rect);
+      if (bh > 18) {
+        const lbl = svgEl('text',{x:bx+barW/2,y:by-4,textAnchor:'middle','font-size':'10','fill':'var(--text-secondary)','font-weight':'600'});
+        lbl.textContent = val.toFixed(0); svg.appendChild(lbl);
+      }
+    };
+    drawBar(p.pre,  -barW*0.55, 'var(--s1)', 'Pré-OCR');
+    drawBar(p.post, +barW*0.55, 'var(--s2)', 'Pós-OCR');
+
+    const lblEl = svgEl('text',{x:cx,y:pad.t+ch+20,textAnchor:'middle','font-size':'10','fill':'var(--text-muted)'});
+    lblEl.textContent = p.vt; svg.appendChild(lblEl);
+    const lblEl2 = svgEl('text',{x:cx,y:pad.t+ch+33,textAnchor:'middle','font-size':'9','fill':'var(--text-muted)'});
+    lblEl2.textContent = p.dm; svg.appendChild(lblEl2);
+  });
+})();
+
+// ─── CHART: ORH DEV BAR ────────────────────────────────────────────────────
+
+(function() {
+  const svg = document.getElementById('orhBar');
+  const W=820, H=320, pad={t:20,r:20,b:80,l:50};
+  const cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
+
+  const keys = [...new Set(modalData.map(d => `${d.vt}|${d.dm}`))];
+  const pairs = keys.map(k => {
+    const [vt,dm] = k.split('|');
+    const pre  = modalData.find(d => d.vt===vt && d.dm===dm && d.per==='PRE_OCR');
+    const post = modalData.find(d => d.vt===vt && d.dm===dm && d.per==='POST_OCR');
+    return {vt, dm, pre: pre?.dev||0, post: post?.dev||0};
+  });
+
+  const minV = Math.min(...pairs.flatMap(p=>[p.pre,p.post]), 0);
+  const maxV = Math.max(...pairs.flatMap(p=>[p.pre,p.post]))*1.12;
+  const zero = pad.t + ch - (0 - minV)/(maxV - minV)*ch;
+  const yScale = v => pad.t + ch - (v-minV)/(maxV-minV)*ch;
+
+  [-2,0,2,4,6,8,10,12].forEach(v => {
+    if (v < minV || v > maxV) return;
+    const y = yScale(v);
+    svg.appendChild(svgEl('line',{x1:pad.l,y1:y,x2:pad.l+cw,y2:y,stroke:v===0?'var(--baseline)':'var(--gridline)',strokeWidth:v===0?1.5:1}));
+    svg.appendChild(svgEl('text',{x:pad.l-6,y:y+4,textAnchor:'end','font-size':'10','fill':'var(--text-muted)'})).textContent = v+'h';
+  });
+
+  const groupW = cw / pairs.length;
+  const barW = groupW * 0.35;
+
+  pairs.forEach((p, i) => {
+    const cx = pad.l + i*groupW + groupW/2;
+    const drawBar = (val, xOff, color, label) => {
+      const by = val >= 0 ? yScale(val) : zero;
+      const bh = Math.abs(yScale(val) - zero);
+      if (bh < 1) return;
+      const bx = cx + xOff - barW/2;
+      const rect = svgEl('rect',{x:bx,y:by,width:barW,height:Math.max(bh,2),fill:color,rx:3,ry:3});
+      rect.style.cursor='pointer';
+      rect.addEventListener('mouseenter', e => showTip(e, `<b>${p.vt} ${p.dm}</b><br>${label}<br>ORH desvio: <b>${val>0?'+':''}${val.toFixed(2)}h</b>`));
+      rect.addEventListener('mousemove', moveTip);
+      rect.addEventListener('mouseleave', hideTip);
+      svg.appendChild(rect);
+    };
+    drawBar(p.pre, -barW*0.55, 'var(--s1)', 'Pré-OCR');
+    drawBar(p.post, +barW*0.55, 'var(--s2)', 'Pós-OCR');
+
+    const lblEl = svgEl('text',{x:cx,y:pad.t+ch+20,textAnchor:'middle','font-size':'10','fill':'var(--text-muted)'});
+    lblEl.textContent = p.vt; svg.appendChild(lblEl);
+    const lblEl2 = svgEl('text',{x:cx,y:pad.t+ch+33,textAnchor:'middle','font-size':'9','fill':'var(--text-muted)'});
+    lblEl2.textContent = p.dm; svg.appendChild(lblEl2);
+  });
+})();
+
+// ─── CHART: STEM OUT BAR ───────────────────────────────────────────────────
+
+(function() {
+  const svg = document.getElementById('stemOutBar');
+  const W=380, H=220, pad={t:20,r:20,b:50,l:55};
+  const cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
+  const groups = [
+    {label:'Pré-OCR', real:68.3, plan:12.7},
+    {label:'Pós-OCR', real:72.7, plan:13.8},
+  ];
+  const maxV = 90;
+  const yScale = v => pad.t + ch - (v/maxV)*ch;
+  const groupW = cw/2;
+  const barW = groupW * 0.35;
+
+  [0,20,40,60,80].forEach(v => {
+    const y = yScale(v);
+    svg.appendChild(svgEl('line',{x1:pad.l,y1:y,x2:pad.l+cw,y2:y,stroke:'var(--gridline)',strokeWidth:1}));
+    svg.appendChild(svgEl('text',{x:pad.l-6,y:y+4,textAnchor:'end','font-size':'10','fill':'var(--text-muted)'})).textContent = v;
+  });
+
+  groups.forEach((g,i) => {
+    const cx = pad.l + i*groupW + groupW/2;
+    [[g.real,'var(--s6)','Real'], [g.plan,'var(--s1)','Plan']].forEach(([val,col,lbl],j) => {
+      const bh = (val/maxV)*ch;
+      const bx = cx + (j===0 ? -barW*0.55 : barW*0.55) - barW/2;
+      const by = yScale(val);
+      const rect = svgEl('rect',{x:bx,y:by,width:barW,height:bh,fill:col,rx:3,ry:3,opacity: j===1?0.7:1});
+      rect.addEventListener('mouseenter', e => showTip(e, `${g.label} — ${lbl}<br><b>${val.toFixed(1)} min</b>`));
+      rect.addEventListener('mousemove', moveTip);
+      rect.addEventListener('mouseleave', hideTip);
+      svg.appendChild(rect);
+      const lbl2 = svgEl('text',{x:bx+barW/2,y:by-4,textAnchor:'middle','font-size':'10','fill':'var(--text-secondary)','font-weight':'600'});
+      lbl2.textContent = val.toFixed(0); svg.appendChild(lbl2);
+    });
+    const lx = svgEl('text',{x:cx,y:pad.t+ch+18,textAnchor:'middle','font-size':'11','fill':'var(--text-secondary)'});
+    lx.textContent = g.label; svg.appendChild(lx);
+  });
+  const axis = svgEl('text',{x:pad.l-40,y:pad.t+ch/2,textAnchor:'middle','font-size':'10','fill':'var(--text-muted)',transform:`rotate(-90,${pad.l-40},${pad.t+ch/2})`});
+  axis.textContent = 'minutos'; svg.appendChild(axis);
+})();
+
+// ─── CHART: OZH BAR ────────────────────────────────────────────────────────
+
+(function() {
+  const svg = document.getElementById('ozhBar');
+  const W=380, H=220, pad={t:20,r:20,b:50,l:55};
+  const cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
+  const groups = [
+    {label:'Pré-OCR', real:4.181, plan:4.873},
+    {label:'Pós-OCR', real:4.095, plan:4.451},
+  ];
+  const maxV = 6;
+  const yScale = v => pad.t + ch - (v/maxV)*ch;
+  const groupW = cw/2;
+  const barW = groupW * 0.35;
+
+  [0,1,2,3,4,5].forEach(v => {
+    const y = yScale(v);
+    svg.appendChild(svgEl('line',{x1:pad.l,y1:y,x2:pad.l+cw,y2:y,stroke:'var(--gridline)',strokeWidth:1}));
+    svg.appendChild(svgEl('text',{x:pad.l-6,y:y+4,textAnchor:'end','font-size':'10','fill':'var(--text-muted)'})).textContent = v+'h';
+  });
+
+  groups.forEach((g,i) => {
+    const cx = pad.l + i*groupW + groupW/2;
+    [[g.real,'var(--s6)','Real'], [g.plan,'var(--s1)','Plan']].forEach(([val,col,lbl],j) => {
+      const bh = (val/maxV)*ch;
+      const bx = cx + (j===0 ? -barW*0.55 : barW*0.55) - barW/2;
+      const by = yScale(val);
+      const rect = svgEl('rect',{x:bx,y:by,width:barW,height:bh,fill:col,rx:3,ry:3,opacity:j===1?0.7:1});
+      rect.addEventListener('mouseenter', e => showTip(e, `${g.label} — ${lbl}<br><b>${val.toFixed(3)}h</b>`));
+      rect.addEventListener('mousemove', moveTip);
+      rect.addEventListener('mouseleave', hideTip);
+      svg.appendChild(rect);
+      const lbl2 = svgEl('text',{x:bx+barW/2,y:by-4,textAnchor:'middle','font-size':'10','fill':'var(--text-secondary)','font-weight':'600'});
+      lbl2.textContent = val.toFixed(2); svg.appendChild(lbl2);
+    });
+    const lx = svgEl('text',{x:cx,y:pad.t+ch+18,textAnchor:'middle','font-size':'11','fill':'var(--text-secondary)'});
+    lx.textContent = g.label; svg.appendChild(lx);
+  });
+})();
+
+// ─── CHART: COMPONENTS DEVIATION BAR ──────────────────────────────────────
+
+(function() {
+  const svg = document.getElementById('componentsBar');
+  const W=820, H=240, pad={t:20,r:20,b:50,l:60};
+  const cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
+
+  const components = [
+    {label:'STEM OUT\n(horas)', pre: orhSummary[0].stemOutDev, post: orhSummary[1].stemOutDev},
+    {label:'OZH', pre: orhSummary[0].ozhDev, post: orhSummary[1].ozhDev},
+    {label:'ORH Total', pre: orhSummary[0].orhDev, post: orhSummary[1].orhDev},
+  ];
+
+  const allVals = components.flatMap(c=>[c.pre,c.post]);
+  const minV = Math.min(...allVals)*1.2;
+  const maxV = Math.max(...allVals)*1.2;
+  const zero = pad.t + ch * (maxV/(maxV-minV));
+  const yScale = v => pad.t + ch*(maxV-v)/(maxV-minV);
+
+  [-1,-0.5,0,0.5,1,1.5,2].forEach(v => {
+    if (v < minV || v > maxV) return;
+    const y = yScale(v);
+    svg.appendChild(svgEl('line',{x1:pad.l,y1:y,x2:pad.l+cw,y2:y,stroke:v===0?'var(--baseline)':'var(--gridline)',strokeWidth:v===0?1.5:1}));
+    const t = svgEl('text',{x:pad.l-6,y:y+4,textAnchor:'end','font-size':'10','fill':'var(--text-muted)'});
+    t.textContent = (v>=0?'+':'')+v.toFixed(1)+'h'; svg.appendChild(t);
+  });
+
+  const groupW = cw/components.length;
+  const barW = groupW*0.3;
+
+  components.forEach((c,i) => {
+    const cx = pad.l + i*groupW + groupW/2;
+
+    const drawBar = (val, xOff, color, lbl) => {
+      const by = val >= 0 ? yScale(val) : zero;
+      const bh = Math.abs(yScale(val)-zero);
+      if (bh < 1) return;
+      const bx = cx + xOff - barW/2;
+      const rect = svgEl('rect',{x:bx,y:by,width:barW,height:Math.max(bh,2),fill:color,rx:3,ry:3});
+      rect.addEventListener('mouseenter', e => showTip(e, `${c.label} — ${lbl}<br>Desvio: <b>${val>0?'+':''}${val.toFixed(3)}h</b>`));
+      rect.addEventListener('mousemove', moveTip);
+      rect.addEventListener('mouseleave', hideTip);
+      svg.appendChild(rect);
+      const anchor = val >= 0 ? by - 4 : by + bh + 12;
+      const lbl2 = svgEl('text',{x:bx+barW/2,y:anchor,textAnchor:'middle','font-size':'10','fill':'var(--text-secondary)','font-weight':'600'});
+      lbl2.textContent = (val>=0?'+':'')+val.toFixed(2)+'h'; svg.appendChild(lbl2);
+    };
+
+    drawBar(c.pre, -barW*0.6, 'var(--s1)', 'Pré-OCR');
+    drawBar(c.post, barW*0.6, 'var(--s2)', 'Pós-OCR');
+
+    const parts = c.label.split('\n');
+    const lx1 = svgEl('text',{x:cx,y:pad.t+ch+18,textAnchor:'middle','font-size':'12','fill':'var(--text-secondary)','font-weight':'600'});
+    lx1.textContent = parts[0]; svg.appendChild(lx1);
+    if (parts[1]) {
+      const lx2 = svgEl('text',{x:cx,y:pad.t+ch+30,textAnchor:'middle','font-size':'10','fill':'var(--text-muted)'});
+      lx2.textContent = parts[1]; svg.appendChild(lx2);
+    }
+  });
+})();
+
+// ─── CHART: CHURN KPI BAR ─────────────────────────────────────────────────
+
+(function() {
+  const svg = document.getElementById('churnKpiBar');
+  const W=820, H=300, pad={t:20,r:20,b:80,l:55};
+  const cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
+
+  // Group by mes+tipo, show churn vs retained
+  const combos = [
+    {label:'Extra\nMar', pre:true, churn: churnKpiData.find(d=>d.mes==='Mar/26'&&d.tipo==='Extra'&&d.status==='CHURN'), ret: churnKpiData.find(d=>d.mes==='Mar/26'&&d.tipo==='Extra'&&d.status==='RETAINED')},
+    {label:'MLP\nMar',   pre:true, churn: churnKpiData.find(d=>d.mes==='Mar/26'&&d.tipo==='MLP'&&d.status==='CHURN'), ret: churnKpiData.find(d=>d.mes==='Mar/26'&&d.tipo==='MLP'&&d.status==='RETAINED')},
+    {label:'Extra\nAbr', pre:true, churn: churnKpiData.find(d=>d.mes==='Abr/26'&&d.tipo==='Extra'&&d.status==='CHURN'), ret: churnKpiData.find(d=>d.mes==='Abr/26'&&d.tipo==='Extra'&&d.status==='RETAINED')},
+    {label:'MLP\nAbr',   pre:true, churn: churnKpiData.find(d=>d.mes==='Abr/26'&&d.tipo==='MLP'&&d.status==='CHURN'), ret: churnKpiData.find(d=>d.mes==='Abr/26'&&d.tipo==='MLP'&&d.status==='RETAINED')},
+    {label:'Extra\nMai', pre:false,churn: churnKpiData.find(d=>d.mes==='Mai/26'&&d.tipo==='Extra'&&d.status==='CHURN'), ret: churnKpiData.find(d=>d.mes==='Mai/26'&&d.tipo==='Extra'&&d.status==='RETAINED')},
+    {label:'MLP\nMai',   pre:false,churn: churnKpiData.find(d=>d.mes==='Mai/26'&&d.tipo==='MLP'&&d.status==='CHURN'), ret: churnKpiData.find(d=>d.mes==='Mai/26'&&d.tipo==='MLP'&&d.status==='RETAINED')},
+    {label:'Extra\nJun', pre:false,churn: churnKpiData.find(d=>d.mes==='Jun/26'&&d.tipo==='Extra'&&d.status==='CHURN'), ret: churnKpiData.find(d=>d.mes==='Jun/26'&&d.tipo==='Extra'&&d.status==='RETAINED')},
+    {label:'MLP\nJun',   pre:false,churn: churnKpiData.find(d=>d.mes==='Jun/26'&&d.tipo==='MLP'&&d.status==='CHURN'), ret: churnKpiData.find(d=>d.mes==='Jun/26'&&d.tipo==='MLP'&&d.status==='RETAINED')},
+  ];
+
+  const maxV = Math.max(...combos.map(c => Math.max(c.churn?.dev||0, c.ret?.dev||0))) * 1.1;
+  const yScale = v => pad.t + ch - (v/maxV)*ch;
+  const groupW = cw/combos.length;
+  const barW = groupW*0.35;
+
+  [0,2,4,6,8,10,12,14,16,18,20].forEach(v => {
+    if (v > maxV) return;
+    const y = yScale(v);
+    svg.appendChild(svgEl('line',{x1:pad.l,y1:y,x2:pad.l+cw,y2:y,stroke:'var(--gridline)',strokeWidth:1}));
+    svg.appendChild(svgEl('text',{x:pad.l-6,y:y+4,textAnchor:'end','font-size':'10','fill':'var(--text-muted)'})).textContent = '+'+v+'h';
+  });
+
+  // OCR divider between index 3 and 4
+  const ocrX = pad.l + (3.5/combos.length)*cw;
+  svg.appendChild(svgEl('line',{x1:ocrX,y1:pad.t,x2:ocrX,y2:pad.t+ch,stroke:'var(--s3)',strokeWidth:1.5,strokeDasharray:'4 3'}));
+  const ol = svgEl('text',{x:ocrX+3,y:pad.t+14,'font-size':'9','fill':'var(--s3)','font-weight':'600'});
+  ol.textContent='OCR 28/04'; svg.appendChild(ol);
+
+  combos.forEach((c,i) => {
+    const cx = pad.l + i*groupW + groupW/2;
+    const drawBar = (d, xOff, color, lbl) => {
+      if (!d) return;
+      const bh = (d.dev/maxV)*ch;
+      const bx = cx + xOff - barW/2;
+      const by = yScale(d.dev);
+      const rect = svgEl('rect',{x:bx,y:by,width:barW,height:Math.max(bh,2),fill:color,rx:3,ry:3});
+      rect.addEventListener('mouseenter', e => showTip(e, `${c.label.replace('\n',' ')} — ${lbl}<br>ORH dev: <b>+${d.dev.toFixed(2)}h</b><br>Motoristas: ${d.motoristas}`));
+      rect.addEventListener('mousemove', moveTip);
+      rect.addEventListener('mouseleave', hideTip);
+      svg.appendChild(rect);
+    };
+    drawBar(c.churn, -barW*0.55, 'var(--s6)', 'CHURN');
+    drawBar(c.ret, +barW*0.55, 'var(--s1)', 'RETIDO');
+
+    const parts = c.label.split('\n');
+    const lx1 = svgEl('text',{x:cx,y:pad.t+ch+18,textAnchor:'middle','font-size':'10','fill': c.pre?'var(--badge-pre-text)':'var(--badge-post-text)','font-weight':'600'});
+    lx1.textContent = parts[0]; svg.appendChild(lx1);
+    const lx2 = svgEl('text',{x:cx,y:pad.t+ch+32,textAnchor:'middle','font-size':'10','fill':'var(--text-muted)'});
+    lx2.textContent = parts[1]; svg.appendChild(lx2);
+  });
+})();
+</script>
+</body>
+</html>
