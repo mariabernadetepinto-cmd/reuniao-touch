@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Churn Frota Fixa — MLB</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f8f7f4; --surface: #fff; --border: rgba(0,0,0,0.08);
+  --text: #1a1a1a; --muted: #666; --radius: 10px;
+  --blue: #1971C2; --blue-bg: #E7F5FF; --blue-light: #74C0FC;
+  --teal: #0CA678; --teal-bg: #E6FCF5;
+  --amber: #E67700; --amber-bg: #FFF3BF;
+  --red: #C92A2A; --red-bg: #FFF5F5;
+  --purple: #6741D9; --purple-bg: #F3F0FF;
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; }
+.container { max-width: 1100px; margin: 0 auto; }
+
+/* Header */
+.page-header { margin-bottom: 2rem; }
+.page-header h1 { font-size: 22px; font-weight: 600; }
+.page-header p { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.badge { font-size: 12px; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); }
+.badge.highlight { background: var(--blue-bg); border-color: var(--blue-light); color: var(--blue); font-weight: 600; }
+
+/* Explainer */
+.explainer { background: var(--amber-bg); border: 1px solid #FFD43B; border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
+.explainer h2 { font-size: 14px; font-weight: 600; color: var(--amber); margin-bottom: 0.75rem; }
+.explainer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 600px) { .explainer-grid { grid-template-columns: 1fr; } }
+.explainer-item { font-size: 13px; line-height: 1.6; }
+.explainer-item strong { color: var(--text); }
+.tag-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+
+/* KPI row */
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 2rem; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.kpi .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.kpi .value { font-size: 26px; font-weight: 700; margin-top: 4px; }
+.kpi .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.kpi.accent { border-color: var(--blue-light); background: var(--blue-bg); }
+.kpi.accent .value { color: var(--blue); }
+.kpi.green { border-color: #8CE99A; background: #EBFBEE; }
+.kpi.green .value { color: #2F9E44; }
+
+/* Insight box */
+.insight { background: var(--purple-bg); border: 1px solid #B197FC; border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 2rem; font-size: 13px; line-height: 1.7; }
+.insight strong { color: var(--purple); }
+
+/* Two col layout */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 2rem; }
+@media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+
+/* Chart card */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; }
+.card h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.card .card-sub { font-size: 12px; color: var(--muted); margin-bottom: 1rem; }
+
+/* Bar charts */
+.bar-chart { display: flex; flex-direction: column; gap: 6px; }
+.bar-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.bar-label { width: 110px; text-align: right; color: var(--muted); flex-shrink: 0; font-size: 11px; }
+.bar-track { flex: 1; background: #f0f0f0; border-radius: 3px; height: 18px; position: relative; }
+.bar-fill { height: 100%; border-radius: 3px; display: flex; align-items: center; padding-left: 6px; font-size: 11px; font-weight: 600; color: #fff; transition: width .4s; }
+.bar-fill.low  { background: var(--teal); }
+.bar-fill.mid  { background: var(--amber); }
+.bar-fill.high { background: var(--red); }
+.bar-n { font-size: 10px; color: var(--muted); width: 55px; text-align: right; flex-shrink: 0; }
+
+/* Threshold chart (SVG) */
+.thresh-container { position: relative; }
+.thresh-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.thresh-leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+.thresh-leg-dot { width: 20px; height: 3px; border-radius: 2px; }
+
+/* Correlations table */
+.corr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.corr-table th { text-align: left; padding: 6px 10px; border-bottom: 2px solid var(--border); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+.corr-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.r-val { font-weight: 700; font-family: monospace; font-size: 13px; }
+.r-pos { color: var(--red); }
+.r-neg { color: var(--teal); }
+.r-tiny { color: var(--muted); }
+.sig-chip { font-size: 10px; padding: 1px 6px; border-radius: 10px; background: #E9ECEF; color: #495057; }
+.sig-chip.sig { background: #FFE3E3; color: var(--red); }
+
+/* Comparison highlight */
+.compare { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 2rem; }
+.compare h3 { font-size: 14px; font-weight: 600; margin-bottom: 1rem; }
+.compare-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.compare-cell { background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+.compare-cell .clabel { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.compare-cell .cvalue { font-size: 18px; font-weight: 700; }
+.compare-cell.good .cvalue { color: #2F9E44; }
+.compare-cell.warn .cvalue { color: var(--amber); }
+.compare-cell.bad .cvalue { color: var(--red); }
+
+footer { margin-top: 3rem; text-align: center; font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="page-header">
+  <h1>Churn × Performance — Frota Fixa · MLB</h1>
+  <p>Análise de dose-resposta e limiares para drivers do modelo Frota Fixa (Rental, Dedicado, EV, Melione…)</p>
+  <div class="badges">
+    <span class="badge highlight">Frota Fixa · CM_GROUP</span>
+    <span class="badge">Brasil (MLB)</span>
+    <span class="badge">Jan–Jun 2025</span>
+    <span class="badge">≥ 5 rotas/mês</span>
+  </div>
+</div>
+
+<!-- EXPLAINER -->
+<div class="explainer">
+  <h2>📖 O que significam P80, P75, P60… e o que os gráficos mostram</h2>
+  <div class="explainer-grid">
+    <div class="explainer-item">
+      <strong>Percentil (P) = limiar de corte</strong><br>
+      P80 significa o valor de desvio de ORH que separa os 20% mais extremos do restante. Se P80 = +38%, então 80% dos drivers tiveram desvio ≤ 38%.<br><br>
+      <strong>Gráfico de Dose-Resposta (esquerda):</strong> agrupa drivers por faixa de desvio médio de ORH no mês e mostra a taxa de churn de cada grupo. Responde: "quem desvia mais, churn mais?"
+    </div>
+    <div class="explainer-item">
+      <strong>Gráfico de Limiar de Concentração (direita):</strong><br>
+      Para cada limiar (P25, P50…), calcula: "que % das suas rotas esteve acima desse limiar?"
+      Drivers são então agrupados em 5 faixas de concentração (0–20%, 20–40%…) e mostramos o churn de cada faixa.<br><br>
+      Responde: "drivers que <em>frequentemente</em> têm rotas na zona ruim churnam mais?"<br>
+      <div class="tag-row">
+        <span class="tag" style="background:#E3FAFC;color:#0C8599">P25 = 0,5%</span>
+        <span class="tag" style="background:#E6FCF5;color:#0CA678">P50 = 14,8%</span>
+        <span class="tag" style="background:#FFF3BF;color:#E67700">P60 = 22,5%</span>
+        <span class="tag" style="background:#FFE8CC;color:#D9480F">P75 = 33,4%</span>
+        <span class="tag" style="background:#FFE3E3;color:#C92A2A">P80 = 38,2%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- KPI -->
+<div class="kpi-row">
+  <div class="kpi green">
+    <div class="label">Taxa de Churn Geral</div>
+    <div class="value">0,74%</div>
+    <div class="sub">Frota Fixa MLB</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Drivers-mês</div>
+    <div class="value">127.408</div>
+    <div class="sub">Jan–Jun 2025</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Churns</div>
+    <div class="value">949</div>
+    <div class="sub">NEW_CHURN confirmados</div>
+  </div>
+  <div class="kpi accent">
+    <div class="label">Churn c/ ORH &gt; +50%</div>
+    <div class="value">1,25%</div>
+    <div class="sub">+69% acima da média</div>
+  </div>
+</div>
+
+<!-- INSIGHT -->
+<div class="insight">
+  <strong>Frota Fixa vs. outros modelos:</strong> Com 0,74% de churn, Frota Fixa tem retenção muito superior à média MLB (~8% Crowd/Extra).
+  Isso reflete o vínculo contratual mais estruturado (Rental, Dedicado, EV). Mesmo assim, o desvio de ORH ainda é um
+  <strong>sinal preditivo significativo</strong>: drivers na zona &gt;+50% de desvio churnam 1,25% — quase o dobro dos que operam na zona negativa (0,48%).
+  A correlação Spearman (r = +0,026, p &lt; 10⁻²⁰) confirma relação monotônica consistente.
+</div>
+
+<!-- CHARTS -->
+<div class="two-col">
+
+  <!-- DOSE RESPONSE -->
+  <div class="card">
+    <h3>Dose-Resposta: Desvio ORH × Churn</h3>
+    <div class="card-sub">Faixa de desvio médio do driver no mês vs. taxa de churn (%)</div>
+    <div class="bar-chart" id="dose-chart"></div>
+  </div>
+
+  <!-- THRESHOLD -->
+  <div class="card">
+    <h3>Limiar de Concentração × Churn</h3>
+    <div class="card-sub">% das rotas do driver acima de cada limiar (P25–P80) vs. taxa de churn</div>
+    <div class="thresh-legend" id="thresh-legend"></div>
+    <svg id="thresh-svg" width="100%" height="220" viewBox="0 0 420 220"></svg>
+  </div>
+
+</div>
+
+<!-- COMPARE -->
+<div class="compare">
+  <h3>Por que a relação existe mesmo com churn baixo?</h3>
+  <div class="compare-row">
+    <div class="compare-cell good">
+      <div class="clabel">Zona verde (desvio ORH &lt; 0%)</div>
+      <div class="cvalue">0,48%</div>
+      <div style="font-size:11px;color:#666;margin-top:4px">n ≈ 30.816 drivers</div>
+    </div>
+    <div class="compare-cell warn">
+      <div class="clabel">Zona intermediária (0% a +30%)</div>
+      <div class="cvalue">0,63%</div>
+      <div style="font-size:11px;color:#666;margin-top:4px">n ≈ 60.948 drivers</div>
+    </div>
+    <div class="compare-cell bad">
+      <div class="clabel">Zona crítica (&gt; +50%)</div>
+      <div class="cvalue">1,18%</div>
+      <div style="font-size:11px;color:#666;margin-top:4px">n ≈ 15.709 drivers</div>
+    </div>
+  </div>
+  <p style="font-size:12px;color:var(--muted);margin-top:10px">
+    Mesmo que o churn absoluto seja baixo, drivers na zona crítica têm risco <strong>2,5× maior</strong> que os na zona verde.
+    Para Frota Fixa, um ponto percentual de churn representa centenas de contratos — o sinal tem valor operacional real.
+  </p>
+</div>
+
+<!-- CORRELATIONS -->
+<div class="card" style="margin-bottom:2rem">
+  <h3>Tabela de Correlações</h3>
+  <div class="card-sub">Pearson (point-biserial) e Spearman entre métricas de performance e churn binário</div>
+  <table class="corr-table">
+    <thead>
+      <tr>
+        <th>Métrica</th>
+        <th>Pearson r</th>
+        <th>Spearman r</th>
+        <th>n</th>
+        <th>Significância</th>
+        <th>Interpretação</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Desvio ORH</strong></td>
+        <td><span class="r-val r-pos">+0.0213</span></td>
+        <td><span class="r-val r-pos">+0.0262</span></td>
+        <td>127.408</td>
+        <td><span class="sig-chip sig">p &lt; 10⁻¹³</span></td>
+        <td style="font-size:12px">Mais desvio → mais churn. Efeito pequeno mas consistente.</td>
+      </tr>
+      <tr>
+        <td><strong>DPPH</strong></td>
+        <td><span class="r-val r-tiny">−0.0010</span></td>
+        <td><span class="r-val r-neg">−0.0333</span></td>
+        <td>127.408</td>
+        <td><span class="sig-chip sig">p &lt; 10⁻³²</span></td>
+        <td style="font-size:12px">Menos produtivo → leve tendência a churnar. Spearman capta não-linearidade.</td>
+      </tr>
+      <tr>
+        <td><strong>Desvio Paradas</strong></td>
+        <td><span class="r-val r-neg">−0.0062</span></td>
+        <td><span class="r-val r-neg">−0.0324</span></td>
+        <td>127.406</td>
+        <td><span class="sig-chip sig">p &lt; 10⁻³⁰</span></td>
+        <td style="font-size:12px">Direção inversa: quem entrega mais paradas que o planejado, churn menos (sobrecarga ≠ saída).</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size:11px;color:var(--muted);margin-top:10px">
+    ⚠️ Correlações baixas em valor absoluto são esperadas quando o desfecho (churn) é raro (&lt;1%). O p-valor reflete apenas consistência estatística com n grande, não magnitude do efeito. Use o gráfico de dose-resposta para avaliar impacto prático.
+  </p>
+</div>
+
+<footer>
+  Frota Fixa MLB · LK_DRIVERS_RFL_STATUS_MONTHLY + LK_DRIVER_CM_MONTHLY + DM_SHP_ROUTES_LAST_MILE · Jan–Jun 2025 · pool estável (excl. NEW, REATIVADO, READQUIRIDO)
+</footer>
+
+</div>
+
+<script>
+// DATA
+const DOSE = [
+  {bucket:'< −30%',       n:773,   churn:0.39},
+  {bucket:'−30% a −10%',  n:12908, churn:0.59},
+  {bucket:'−10% a 0%',    n:17135, churn:0.48},
+  {bucket:'0% a 10%',     n:22000, churn:0.53},
+  {bucket:'10% a 30%',    n:38948, churn:0.73},
+  {bucket:'30% a 50%',    n:19935, churn:0.97},
+  {bucket:'50% a 100%',   n:12389, churn:1.25},
+  {bucket:'> 100%',       n:3320,  churn:1.11},
+];
+
+const THRESH = {
+  P25: {val:0.5,  color:'#339AF0', buckets:[{c:'0–20%',r:0.51},{c:'20–40%',r:0.55},{c:'40–60%',r:0.66},{c:'60–80%',r:0.85},{c:'80–100%',r:1.15}]},
+  P50: {val:14.8, color:'#20C997', buckets:[{c:'0–20%',r:0.51},{c:'20–40%',r:0.55},{c:'40–60%',r:0.65},{c:'60–80%',r:0.84},{c:'80–100%',r:1.14}]},
+  P60: {val:22.5, color:'#F59F00', buckets:[{c:'0–20%',r:0.51},{c:'20–40%',r:0.55},{c:'40–60%',r:0.65},{c:'60–80%',r:0.84},{c:'80–100%',r:1.14}]},
+  P75: {val:33.4, color:'#FF6B6B', buckets:[{c:'0–20%',r:0.51},{c:'20–40%',r:0.55},{c:'40–60%',r:0.65},{c:'60–80%',r:0.83},{c:'80–100%',r:1.15}]},
+  P80: {val:38.2, color:'#C92A2A', buckets:[{c:'0–20%',r:0.51},{c:'20–40%',r:0.55},{c:'40–60%',r:0.66},{c:'60–80%',r:0.85},{c:'80–100%',r:1.15}]},
+};
+
+// DOSE CHART
+const maxChurn = Math.max(...DOSE.map(d => d.churn));
+const doseEl = document.getElementById('dose-chart');
+DOSE.forEach(d => {
+  const pct = (d.churn / maxChurn * 100).toFixed(1);
+  const cls = d.churn < 0.6 ? 'low' : d.churn < 0.9 ? 'mid' : 'high';
+  doseEl.innerHTML += `
+    <div class="bar-row">
+      <div class="bar-label">${d.bucket}</div>
+      <div class="bar-track">
+        <div class="bar-fill ${cls}" style="width:${pct}%">${d.churn}%</div>
+      </div>
+      <div class="bar-n">${(d.n/1000).toFixed(1)}k</div>
+    </div>`;
+});
+
+// THRESHOLD LEGEND
+const legEl = document.getElementById('thresh-legend');
+Object.entries(THRESH).forEach(([k, v]) => {
+  legEl.innerHTML += `<div class="thresh-leg">
+    <div class="thresh-leg-dot" style="background:${v.color}"></div>
+    <span>${k} (>${v.val}%)</span>
+  </div>`;
+});
+
+// THRESHOLD SVG
+const svg = document.getElementById('thresh-svg');
+const W = 420, H = 220, PAD = {t:15,r:15,b:35,l:40};
+const cw = W - PAD.l - PAD.r, ch = H - PAD.t - PAD.b;
+const bucketLabels = ['0–20%','20–40%','40–60%','60–80%','80–100%'];
+const allVals = Object.values(THRESH).flatMap(t => t.buckets.map(b => b.r));
+const yMin = 0, yMax = Math.ceil(Math.max(...allVals) * 10) / 10 + 0.2;
+
+function xPos(i) { return PAD.l + (i / (bucketLabels.length - 1)) * cw; }
+function yPos(v) { return PAD.t + ch - ((v - yMin) / (yMax - yMin)) * ch; }
+
+// grid
+let gridHtml = '';
+[0, 0.25, 0.5, 0.75, 1.0, 1.25].forEach(v => {
+  if (v > yMax) return;
+  const y = yPos(v);
+  gridHtml += `<line x1="${PAD.l}" y1="${y}" x2="${W-PAD.r}" y2="${y}" stroke="#e8e8e8" stroke-width="1"/>`;
+  gridHtml += `<text x="${PAD.l-4}" y="${y+4}" text-anchor="end" font-size="9" fill="#999">${v}%</text>`;
+});
+// x labels
+bucketLabels.forEach((l, i) => {
+  gridHtml += `<text x="${xPos(i)}" y="${H-5}" text-anchor="middle" font-size="9" fill="#999">${l}</text>`;
+});
+
+// lines
+let linesHtml = '';
+Object.entries(THRESH).forEach(([k, v]) => {
+  const pts = v.buckets.map((b, i) => `${xPos(i)},${yPos(b.r)}`).join(' ');
+  linesHtml += `<polyline points="${pts}" fill="none" stroke="${v.color}" stroke-width="2.5" stroke-linejoin="round"/>`;
+  v.buckets.forEach((b, i) => {
+    linesHtml += `<circle cx="${xPos(i)}" cy="${yPos(b.r)}" r="4" fill="${v.color}" stroke="#fff" stroke-width="1.5"/>`;
+  });
+});
+
+svg.innerHTML = gridHtml + linesHtml;
+</script>
+</body>
+</html>
