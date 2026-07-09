@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Churn × ORH · DPPH · Paradas — Brasil Envios Extra</title>
+<style>
+:root{
+  --bg:#0f172a;--surface:#1e293b;--surface2:#243447;--border:#334155;
+  --text:#f1f5f9;--muted:#94a3b8;--sub:#64748b;
+  --newbie:#2563EB;--newhire:#D97706;--tenured:#059669;--veteran:#DC2626;
+  --green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--blue:#3b82f6;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;}
+header{padding:24px 32px 16px;border-bottom:1px solid var(--border);}
+header h1{font-size:19px;font-weight:700;margin-bottom:3px;}
+header p{color:var(--muted);font-size:12px;}
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 32px;overflow-x:auto;}
+.tab{padding:11px 18px;cursor:pointer;color:var(--muted);font-size:13px;font-weight:500;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;}
+.tab.active{color:var(--text);border-bottom-color:var(--blue);}
+.tab:hover{color:var(--text);}
+.panel{display:none;padding:24px 32px;}
+.panel.active{display:block;}
+
+/* conclusão */
+.conclusion{background:var(--surface2);border:1px solid var(--border);border-left:4px solid var(--blue);border-radius:10px;padding:18px 20px;margin-bottom:24px;}
+.conclusion h3{font-size:13px;font-weight:700;color:var(--blue);margin-bottom:12px;letter-spacing:.04em;text-transform:uppercase;}
+.conclusion-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.conc-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;}
+.conc-card .label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+.conc-card .value{font-size:15px;font-weight:700;margin-bottom:4px;}
+.conc-card .desc{font-size:11px;color:var(--muted);line-height:1.4;}
+.sig-strong{color:var(--red);}
+.sig-mod{color:var(--yellow);}
+.sig-weak{color:var(--muted);}
+
+/* churn bar geral */
+.career-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.career-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;border-left:4px solid transparent;}
+.career-card.newbie {border-left-color:var(--newbie);}
+.career-card.newhire{border-left-color:var(--newhire);}
+.career-card.tenured{border-left-color:var(--tenured);}
+.career-card.veteran{border-left-color:var(--veteran);}
+.cc-career{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px;}
+.cc-rate{font-size:32px;font-weight:800;margin-bottom:2px;}
+.cc-sub{font-size:11px;color:var(--muted);}
+
+/* tercil charts */
+.section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:14px;margin-top:4px;}
+.tercil-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.tercil-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+.tc-career{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;}
+.tc-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.tc-label{font-size:11px;color:var(--muted);width:44px;flex-shrink:0;}
+.tc-bar-wrap{flex:1;background:var(--surface2);border-radius:4px;height:22px;position:relative;overflow:hidden;}
+.tc-bar{height:100%;border-radius:4px;transition:width .3s;}
+.tc-val{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:var(--text);}
+.tc-n{font-size:9px;color:var(--sub);margin-top:1px;}
+.arrow-up{color:var(--red);font-size:10px;font-weight:700;}
+.arrow-down{color:var(--green);font-size:10px;font-weight:700;}
+.arrow-flat{color:var(--muted);font-size:10px;}
+
+/* corr table */
+.corr-table{width:100%;border-collapse:collapse;font-size:12px;}
+.corr-table th{background:var(--surface2);padding:9px 12px;font-size:11px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);text-align:left;}
+.corr-table td{padding:9px 12px;border-bottom:1px solid var(--border);}
+.corr-table tr:hover td{background:rgba(255,255,255,.03);}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;}
+.pill-strong{background:rgba(239,68,68,.2);color:#f87171;}
+.pill-mod{background:rgba(245,158,11,.2);color:#fbbf24;}
+.pill-weak{background:rgba(148,163,184,.1);color:var(--muted);}
+.pos{color:var(--red);}
+.neg{color:var(--green);}
+
+.tooltip{position:fixed;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:9px 13px;font-size:12px;pointer-events:none;z-index:100;display:none;}
+</style>
+</head>
+<body>
+<header>
+  <h1>Churn × ORH · DPPH · Paradas — Brasil · Envios Extra</h1>
+  <p>RFL M-1 rule (NEW_CHURN) · MLB 2025+ · n = 791.000 drivers · Pearson &amp; Spearman</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="go('resumo')">Conclusão &amp; Churn</div>
+  <div class="tab" onclick="go('orh')">Desvio ORH</div>
+  <div class="tab" onclick="go('dpph')">DPPH</div>
+  <div class="tab" onclick="go('stops')">Desvio Paradas</div>
+  <div class="tab" onclick="go('corr')">Correlações</div>
+</div>
+
+<!-- RESUMO -->
+<div id="tab-resumo" class="panel active">
+
+  <div class="conclusion">
+    <h3>Conclusão Estatística</h3>
+    <div class="conclusion-grid">
+      <div class="conc-card">
+        <div class="label">DPPH — sinal mais forte</div>
+        <div class="value sig-strong">Spearman r = −0.10 (NEW HIRE)</div>
+        <div class="desc">Drivers com DPPH <strong>baixo</strong> churnam mais. Quem está no 1/3 inferior de produtividade tem taxa 11,4pp maior que o 1/3 superior. Relação monotônica consistente em todas as carreiras.</div>
+      </div>
+      <div class="conc-card">
+        <div class="label">ORH — confirmado, efeito menor</div>
+        <div class="value sig-mod">Spearman r = +0.08 (NEW HIRE)</div>
+        <div class="desc">Desvio de ORH alto → mais churn. O 1/3 com mais desvio chorna 8,4pp a mais (NEW HIRE). VETERAN inverte: r = +0.02, efeito marginal.</div>
+      </div>
+      <div class="conc-card">
+        <div class="label">Paradas — sem relevância prática</div>
+        <div class="value sig-weak">Pearson r ≈ 0</div>
+        <div class="desc">Spearman significativo mas r &lt; 0.08 e Pearson ≈ 0. Desvio de paradas não explica churn de forma prática — o sinal pode ser espúrio dado o n grande.</div>
+      </div>
+    </div>
+    <div style="margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:8px;border:1px solid var(--border);">
+      <span style="font-size:11px;color:var(--muted)"><strong style="color:var(--text)">Interpretação do r pequeno:</strong> Os r de 0.02–0.10 são esperados em dados operacionais com n &gt; 100k. O que importa é a <strong style="color:var(--text)">diferença de taxa de churn entre os grupos</strong> (tercis abaixo) — que chega a 11pp para DPPH e 8pp para ORH. Isso é acionável.</span>
+    </div>
+  </div>
+
+  <div class="section-title">Taxa de Churn por Carreira — Brasil</div>
+  <div class="career-grid" id="career-cards"></div>
+
+</div>
+
+<!-- ORH -->
+<div id="tab-orh" class="panel">
+  <div class="conclusion" style="border-left-color:var(--yellow)">
+    <h3>Interpretação — Desvio ORH</h3>
+    <p style="font-size:12px;color:var(--muted);line-height:1.6">Drivers com <strong style="color:var(--text)">ORH real muito acima do planejado</strong> têm mais churn. O efeito é mais forte em <strong style="color:var(--newhire)">NEW HIRE</strong> (+8,4pp entre o 1/3 de menor e maior desvio) e em <strong style="color:var(--veteran)">VETERAN</strong> (+3,6pp). Para <strong style="color:var(--tenured)">TENURED</strong> o efeito é mínimo (+1,5pp).</p>
+  </div>
+  <div class="section-title">Churn % por faixa de Desvio ORH (tercis)</div>
+  <div class="tercil-grid" id="orh-cards"></div>
+</div>
+
+<!-- DPPH -->
+<div id="tab-dpph" class="panel">
+  <div class="conclusion" style="border-left-color:var(--red)">
+    <h3>Interpretação — DPPH (Deliveries por hora produtiva)</h3>
+    <p style="font-size:12px;color:var(--muted);line-height:1.6"><strong style="color:var(--text)">DPPH baixo = mais churn</strong>. Correlação negativa em todas as carreiras. Drivers no 1/3 de menor produtividade horária churnam significativamente mais: <strong style="color:var(--newhire)">NEW HIRE</strong> +11,4pp, <strong style="color:var(--veteran)">VETERAN</strong> +5,6pp. É o indicador com sinal mais limpo e consistente.</p>
+  </div>
+  <div class="section-title">Churn % por faixa de DPPH (tercis)</div>
+  <div class="tercil-grid" id="dpph-cards"></div>
+</div>
+
+<!-- STOPS -->
+<div id="tab-stops" class="panel">
+  <div class="conclusion" style="border-left-color:var(--sub)">
+    <h3>Interpretação — Desvio Paradas</h3>
+    <p style="font-size:12px;color:var(--muted);line-height:1.6">Pearson r ≈ 0 em todas as carreiras — desvio de paradas <strong style="color:var(--text)">não tem correlação linear com churn</strong>. O Spearman mostra sinal (−0.08 NEW HIRE) mas a diferença de taxa de churn entre tercis é &lt;1pp, sem relevância prática.</p>
+  </div>
+  <div class="section-title">Churn % por faixa de Desvio Paradas (tercis)</div>
+  <div class="tercil-grid" id="stops-cards"></div>
+</div>
+
+<!-- CORRELAÇÕES -->
+<div id="tab-corr" class="panel">
+  <div class="section-title">Tabela completa de correlações</div>
+  <div style="overflow-x:auto">
+    <table class="corr-table">
+      <thead><tr>
+        <th>Carreira</th><th>Métrica</th>
+        <th>Pearson r</th><th>p Pearson</th>
+        <th>Spearman r</th><th>p Spearman</th>
+        <th>Força</th><th>Direção</th>
+      </tr></thead>
+      <tbody id="corr-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="tooltip" id="tt"></div>
+
+<script>
+const COLORS={NEWBIE:'#2563EB','NEW HIRE':'#D97706',TENURED:'#059669',VETERAN:'#DC2626'};
+const CLS={NEWBIE:'newbie','NEW HIRE':'newhire',TENURED:'tenured',VETERAN:'veteran'};
+const CAREERS=['NEWBIE','NEW HIRE','TENURED','VETERAN'];
+
+const CHURN_OVERALL=[{"CAREER":"NEW HIRE","total":294524,"churned":153477,"rate":52.1},{"CAREER":"NEWBIE","total":119533,"churned":28057,"rate":23.5},{"CAREER":"TENURED","total":130932,"churned":24178,"rate":18.5},{"CAREER":"VETERAN","total":246011,"churned":25768,"rate":10.5}];
+
+const ORH_Q=[{"CAREER":"NEW HIRE","ORH_Q":"Baixo","n":50960,"rate":47.0},{"CAREER":"NEW HIRE","ORH_Q":"Médio","n":93748,"rate":49.6},{"CAREER":"NEW HIRE","ORH_Q":"Alto","n":149816,"rate":55.4},{"CAREER":"NEWBIE","ORH_Q":"Baixo","n":38864,"rate":22.7},{"CAREER":"NEWBIE","ORH_Q":"Médio","n":42734,"rate":23.0},{"CAREER":"NEWBIE","ORH_Q":"Alto","n":37935,"rate":24.8},{"CAREER":"TENURED","ORH_Q":"Baixo","n":49598,"rate":18.1},{"CAREER":"TENURED","ORH_Q":"Médio","n":45901,"rate":17.9},{"CAREER":"TENURED","ORH_Q":"Alto","n":35433,"rate":19.6},{"CAREER":"VETERAN","ORH_Q":"Baixo","n":124245,"rate":9.9},{"CAREER":"VETERAN","ORH_Q":"Médio","n":81284,"rate":9.9},{"CAREER":"VETERAN","ORH_Q":"Alto","n":40482,"rate":13.5}];
+
+const DPPH_Q=[{"CAREER":"NEW HIRE","DPPH_Q":"Baixo","n":153225,"rate":56.5},{"CAREER":"NEW HIRE","DPPH_Q":"Médio","n":95880,"rate":48.4},{"CAREER":"NEW HIRE","DPPH_Q":"Alto","n":45419,"rate":45.1},{"CAREER":"NEWBIE","DPPH_Q":"Baixo","n":38436,"rate":25.8},{"CAREER":"NEWBIE","DPPH_Q":"Médio","n":44109,"rate":22.5},{"CAREER":"NEWBIE","DPPH_Q":"Alto","n":36988,"rate":22.2},{"CAREER":"TENURED","DPPH_Q":"Baixo","n":34702,"rate":20.4},{"CAREER":"TENURED","DPPH_Q":"Médio","n":47079,"rate":18.1},{"CAREER":"TENURED","DPPH_Q":"Alto","n":49151,"rate":17.4},{"CAREER":"VETERAN","DPPH_Q":"Baixo","n":38819,"rate":14.7},{"CAREER":"VETERAN","DPPH_Q":"Médio","n":75129,"rate":10.8},{"CAREER":"VETERAN","DPPH_Q":"Alto","n":132063,"rate":9.1}];
+
+const STOPS_Q=[{"Q":"Baixo","n":98178,"rate":52.0,"CAREER":"NEW HIRE"},{"Q":"Médio","n":102028,"rate":52.4,"CAREER":"NEW HIRE"},{"Q":"Alto","n":94318,"rate":51.9,"CAREER":"NEW HIRE"},{"Q":"Baixo","n":40109,"rate":24.1,"CAREER":"NEWBIE"},{"Q":"Médio","n":38843,"rate":23.2,"CAREER":"NEWBIE"},{"Q":"Alto","n":40581,"rate":23.1,"CAREER":"NEWBIE"},{"Q":"Baixo","n":43985,"rate":18.5,"CAREER":"TENURED"},{"Q":"Médio","n":43268,"rate":18.2,"CAREER":"TENURED"},{"Q":"Alto","n":43679,"rate":18.7,"CAREER":"TENURED"},{"Q":"Baixo","n":82381,"rate":10.7,"CAREER":"VETERAN"},{"Q":"Médio","n":81895,"rate":10.4,"CAREER":"VETERAN"},{"Q":"Alto","n":81735,"rate":10.3,"CAREER":"VETERAN"}];
+
+const CORRS=[{"career":"NEWBIE","metric":"ORH_DEV","pearson_r":0.037,"pearson_p":1.64e-37,"spearman_r":0.0193,"spearman_p":2.24e-11},{"career":"NEW HIRE","metric":"ORH_DEV","pearson_r":0.0519,"pearson_p":9.91e-175,"spearman_r":0.0783,"spearman_p":0},{"career":"TENURED","metric":"ORH_DEV","pearson_r":0.0304,"pearson_p":3.68e-28,"spearman_r":0.0138,"spearman_p":6.36e-7},{"career":"VETERAN","metric":"ORH_DEV","pearson_r":0.0308,"pearson_p":1.06e-52,"spearman_r":0.0225,"spearman_p":5.86e-29},{"career":"NEWBIE","metric":"DPPH","pearson_r":-0.0222,"pearson_p":1.66e-14,"spearman_r":-0.0355,"spearman_p":9.88e-35},{"career":"NEW HIRE","metric":"DPPH","pearson_r":-0.0652,"pearson_p":4.82e-275,"spearman_r":-0.1018,"spearman_p":0},{"career":"TENURED","metric":"DPPH","pearson_r":-0.0219,"pearson_p":2.36e-15,"spearman_r":-0.0294,"spearman_p":1.8e-26},{"career":"VETERAN","metric":"DPPH","pearson_r":-0.0454,"pearson_p":3.25e-112,"spearman_r":-0.0542,"spearman_p":1.29e-159},{"career":"NEWBIE","metric":"STOPS_DEV","pearson_r":0.0094,"pearson_p":0.00114,"spearman_r":-0.0364,"spearman_p":2.06e-36},{"career":"NEW HIRE","metric":"STOPS_DEV","pearson_r":0.0058,"pearson_p":0.00179,"spearman_r":-0.0799,"spearman_p":0},{"career":"TENURED","metric":"STOPS_DEV","pearson_r":0.0038,"pearson_p":0.168,"spearman_r":-0.0385,"spearman_p":3.08e-44},{"career":"VETERAN","metric":"STOPS_DEV","pearson_r":0.0063,"pearson_p":0.00165,"spearman_r":-0.0595,"spearman_p":1.45e-191}];
+
+const MLABEL={ORH_DEV:'Desvio ORH',DPPH:'DPPH',STOPS_DEV:'Desvio Paradas'};
+
+function pFmt(p){
+  if(!p||p===0) return '<1e-300';
+  if(p<1e-10) return p.toExponential(1);
+  return p.toFixed(4);
+}
+
+function buildCareerCards(){
+  const el = document.getElementById('career-cards');
+  CAREERS.forEach(career=>{
+    const d = CHURN_OVERALL.find(r=>r.CAREER===career);
+    if(!d) return;
+    const color = COLORS[career];
+    el.innerHTML += `<div class="career-card ${CLS[career]}">
+      <div class="cc-career">${career}</div>
+      <div class="cc-rate" style="color:${color}">${d.rate}%</div>
+      <div class="cc-sub" style="margin-bottom:10px">${d.churned.toLocaleString('pt-BR')} de ${d.total.toLocaleString('pt-BR')} drivers</div>
+      <div style="width:100%;background:var(--surface2);border-radius:4px;height:6px;">
+        <div style="width:${d.rate}%;height:6px;background:${color};border-radius:4px;"></div>
+      </div>
+    </div>`;
+  });
+}
+
+function buildTercilCards(data, qField, containerId){
+  const el = document.getElementById(containerId);
+  el.innerHTML='';
+  CAREERS.forEach(career=>{
+    const rows = data.filter(r=>r.CAREER===career);
+    if(!rows.length) return;
+    const color = COLORS[career];
+    const maxRate = Math.max(...rows.map(r=>r.rate));
+    const baixo = rows.find(r=>r[qField]==='Baixo'||r.Q==='Baixo');
+    const alto  = rows.find(r=>r[qField]==='Alto'||r.Q==='Alto');
+    const delta = alto && baixo ? +(alto.rate - baixo.rate).toFixed(1) : null;
+    const arrowHtml = delta===null?'':delta>1?`<span class="arrow-up">▲ +${delta}pp no 1/3 Alto</span>`:
+                      delta<-1?`<span class="arrow-down">▼ ${delta}pp no 1/3 Alto</span>`:
+                      `<span class="arrow-flat">≈ sem diferença relevante</span>`;
+    let html=`<div class="tercil-card">
+      <div class="tc-career" style="color:${color}">${career} ${arrowHtml}</div>`;
+    rows.forEach(row=>{
+      const pct = row.rate/maxRate*100;
+      html+=`<div class="tc-row">
+        <span class="tc-label">${row[qField]||row.Q}</span>
+        <div class="tc-bar-wrap" data-tip="${career} · ${row[qField]||row.Q} · n=${Number(row.n).toLocaleString('pt-BR')} · churn=${row.rate}%">
+          <div class="tc-bar" style="width:${pct}%;background:${color};opacity:${row[qField]==='Baixo'||row.Q==='Baixo'?0.4:row[qField]==='Médio'||row.Q==='Médio'?0.65:0.95}"></div>
+          <span class="tc-val">${row.rate}%</span>
+        </div>
+      </div>
+      <div class="tc-n" style="margin-left:52px;margin-bottom:2px">n = ${Number(row.n).toLocaleString('pt-BR')}</div>`;
+    });
+    html+=`</div>`;
+    el.innerHTML+=html;
+  });
+  attachTips();
+}
+
+function buildCorrTable(){
+  const tbody = document.getElementById('corr-tbody');
+  CORRS.forEach(d=>{
+    const absSp = Math.abs(d.spearman_r);
+    const strength = absSp>=0.08?'Moderada':absSp>=0.04?'Fraca':'Muito fraca';
+    const pillCls = absSp>=0.08?'pill-strong':absSp>=0.04?'pill-mod':'pill-weak';
+    const dir = d.spearman_r>0?'<span class="pos">▲ Positiva (mais desvio → mais churn)</span>':'<span class="neg">▼ Negativa (mais DPPH → menos churn)</span>';
+    tbody.innerHTML+=`<tr>
+      <td style="color:${COLORS[d.career]};font-weight:700">${d.career}</td>
+      <td>${MLABEL[d.metric]}</td>
+      <td style="color:${d.pearson_r>0?'var(--red)':'var(--green)'}">${d.pearson_r>0?'+':''}${d.pearson_r}</td>
+      <td style="color:var(--muted);font-size:11px">${pFmt(d.pearson_p)}</td>
+      <td style="color:${d.spearman_r>0?'var(--red)':'var(--green)'};font-weight:700">${d.spearman_r>0?'+':''}${d.spearman_r}</td>
+      <td style="color:var(--muted);font-size:11px">${pFmt(d.spearman_p)}</td>
+      <td><span class="pill ${pillCls}">${strength}</span></td>
+      <td style="font-size:11px">${dir}</td>
+    </tr>`;
+  });
+}
+
+function attachTips(){
+  const tt=document.getElementById('tt');
+  document.querySelectorAll('[data-tip]').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{tt.textContent=el.dataset.tip;tt.style.display='block';});
+    el.addEventListener('mousemove',e=>{tt.style.left=(e.clientX+14)+'px';tt.style.top=(e.clientY-10)+'px';});
+    el.addEventListener('mouseleave',()=>{tt.style.display='none';});
+  });
+}
+
+function go(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  const idx={resumo:0,orh:1,dpph:2,stops:3,corr:4}[name];
+  document.querySelectorAll('.tab')[idx].classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+buildCareerCards();
+buildTercilCards(ORH_Q,   'ORH_Q',  'orh-cards');
+buildTercilCards(DPPH_Q,  'DPPH_Q', 'dpph-cards');
+buildTercilCards(STOPS_Q, 'Q',      'stops-cards');
+buildCorrTable();
+attachTips();
+</script>
+</body>
+</html>

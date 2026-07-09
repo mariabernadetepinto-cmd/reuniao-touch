@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Driver Analytics — MLB</title>
+<style>
+:root{--bg:#0f172a;--surface:#1e293b;--border:#334155;--text:#f1f5f9;--muted:#94a3b8;--blue:#3b82f6;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;padding:40px 32px;}
+h1{font-size:22px;font-weight:800;margin-bottom:6px;}
+p{color:var(--muted);font-size:13px;margin-bottom:32px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;text-decoration:none;color:inherit;display:block;transition:border-color .15s,transform .15s;}
+.card:hover{border-color:var(--blue);transform:translateY(-2px);}
+.card-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--blue);margin-bottom:8px;}
+.card-title{font-size:15px;font-weight:700;margin-bottom:6px;}
+.card-desc{font-size:12px;color:var(--muted);line-height:1.5;}
+</style>
+</head>
+<body>
+<h1>Driver Analytics — MLB</h1>
+<p>Dashboards de análise de churn e performance · 2025+</p>
+<div class="grid">
+  <a class="card" href="churn_orh_dose_response.html">
+    <div class="card-tag">⭐ Mais recente</div>
+    <div class="card-title">Dose-resposta ORH × Churn M+1</div>
+    <div class="card-desc">Por carreira — volume por faixa de desvio ORH e curvas de threshold (P25–P80). Drivers experienced ≥5 rotas. Brasil completo.</div>
+  </a>
+  <a class="card" href="churn_correlation_v5.html">
+    <div class="card-tag">Correlações</div>
+    <div class="card-title">Churn × ORH · DPPH · Paradas</div>
+    <div class="card-desc">Pearson &amp; Spearman por carreira. Tercis com taxa de churn % real. Brasil — todos os parceiros. n = 1,6M drivers.</div>
+  </a>
+  <a class="card" href="churn_correlation_v4.html">
+    <div class="card-tag">Correlações</div>
+    <div class="card-title">Churn × ORH · DPPH · Paradas (Envios Extra)</div>
+    <div class="card-desc">Mesma análise filtrada para Envios Extra. Conclusão estatística clara com tercis.</div>
+  </a>
+</div>
+</body>
+</html>
