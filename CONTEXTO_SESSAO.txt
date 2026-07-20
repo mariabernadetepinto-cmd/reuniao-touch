@@ -1,0 +1,140 @@
+================================================================================
+EXPORTAÇÃO DE CONTEXTO DE SESSÃO CLAUDE CODE
+Data: 2026-07-20
+Usuário: mariabernadete.pinto@mercadolivre.com
+Repositório: mariabernadetepinto-cmd/reuniao-touch
+================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. SKILLS HABILITADAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. morning
+   Renderiza o brief matinal como artifact HTML ou agenda como tarefa recorrente.
+
+2. cowork-session-migration-macos
+   Migração completa de sessão Cowork inativa para sessão ativa no macOS.
+   Cobre: chats, artifacts, uploads, skills, memória, configuração, plugins
+   marketplace, remote plugins, spaces, project-cache, scheduled tasks, hooks.
+
+3. cowork-session-migration-windows
+   Migração completa de sessão Cowork inativa para sessão ativa no Windows.
+   Cobre: chats, artifacts, uploads, skills, scheduled tasks e chats entre orgs.
+
+4. skill-creator
+   Criar, modificar, otimizar skills e medir performance.
+
+5. xlsx
+   Trabalhar com arquivos .xlsx, .xltx, .csv, .tsv — abrir, editar, criar, converter.
+
+6. pptx
+   Criar, editar, ler ou manipular arquivos .pptx e .potx (apresentações/decks).
+
+7. pdf
+   Ler, extrair texto/tabelas, combinar, dividir, rotacionar, criar, OCR em PDFs.
+
+8. docx
+   Criar, ler, editar documentos Word (.docx, .dotx) com formatação avançada.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. PLUGINS INSTALADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. bigquery-meli          (ID: plugin_015XRR16yMoGzpYiZMc9XXsi)  ✅ ativo
+2. conversational-analytics (ID: plugin_01KxLrTAVNxsJSF9iasqiWJ9) ✅ ativo
+3. grid-sharing           (ID: plugin_01Js9drB6EvLrnJEBwMxAKCH)  ✅ ativo
+4. rag                    (ID: plugin_017rtkDZTkD12gkViuHJt7bm)   ✅ ativo
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. CONECTORES MCP INSTALADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONECTADOS E ATIVOS NO CHAT:
+  ✅ Airtable            — dados estruturados
+  ✅ Gmail               — e-mails (draft, busca, resumo)
+  ✅ Google Calendar      — agenda e reuniões
+  ✅ Google Drive         — arquivos e documentos
+
+INSTALADOS (autenticação pendente/desconectados):
+  ⚠️  Amplitude          — analytics
+  ⚠️  Atlassian          — Jira & Confluence
+  ⚠️  Datadog            — observabilidade
+  ⚠️  Excalidraw         — diagramas hand-drawn
+  ⚠️  Figma              — design e código
+  ⚠️  Granola            — notas de reuniões (IA notepad)
+  ⚠️  MELI Atlassian     — Jira/Confluence MercadoLivre
+  ⚠️  MELI Github        — GitHub interno MELI
+  ⚠️  MELI Google Workspace — Google Workspace MELI
+  ⚠️  MELI Slack         — Slack MELI
+  ❌  meli-directory-mcp — precisa reconectar
+  ❌  metric-agent-mcp   — precisa reconectar
+  ⚠️  Miro               — boards colaborativos
+  ⚠️  monday.com         — gestão de projetos
+  ⚠️  Monte Carlo        — observabilidade de dados
+  ⚠️  Notion             — workspace e documentação
+  ⚠️  Postman            — contexto de APIs
+  ⚠️  rag-mcp            — RAG (retrieval)
+  ⚠️  Slack              — mensagens e canvases
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. REPOSITÓRIO ATUAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Repositório : mariabernadetepinto-cmd/reuniao-touch
+Branch ativa: claude/context-export-migration-z0bzqr
+Diretório   : /home/user/reuniao-touch
+
+Histórico de commits recentes:
+  397363b  Rename index (2).html to index.html
+  4ec671c  Add files via upload
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. TAREFAS E AGENDAMENTOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Tarefas pendentes : nenhuma
+Cron jobs ativos  : nenhum
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. HISTÓRICO DA SESSÃO ATUAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Contexto desta sessão (reuniao-touch):
+- Sessão iniciada no repositório reuniao-touch
+- Branch de trabalho: claude/context-export-migration-z0bzqr
+- Último trabalho: exportação de contexto de sessão para troca de equipamento
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. INSTRUÇÕES PARA RESTAURAR NO NOVO EQUIPAMENTO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. SKILLS — todas são da plataforma claude.ai (não locais), já estão vinculadas
+   à sua conta. Estarão disponíveis automaticamente ao logar.
+
+2. PLUGINS — também vinculados à conta claude.ai:
+   - bigquery-meli, conversational-analytics, grid-sharing, rag
+   Verifique em: claude.ai → Settings → Plugins
+
+3. CONECTORES MCP — vinculados à conta. Reconecte os que aparecerem como
+   "needs_reconnect":
+   - meli-directory-mcp  → reconectar via Settings → Connectors
+   - metric-agent-mcp    → reconectar via Settings → Connectors
+
+4. REPOSITÓRIO — clonar novamente:
+   git clone https://github.com/mariabernadetepinto-cmd/reuniao-touch
+   git checkout claude/context-export-migration-z0bzqr
+
+5. CLAUDE CODE CLI — instalar no novo equipamento:
+   npm install -g @anthropic-ai/claude-code
+   (ou via brew install claude no macOS)
+
+================================================================================
+FIM DO ARQUIVO DE CONTEXTO
+================================================================================
